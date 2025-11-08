@@ -3,97 +3,191 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Cribbage Trainer — Minimal & ACC-faithful</title>
+<title>Cribbage Trainer — Light, Friendly, ACC-faithful</title>
 <style>
   :root{
-    --bg:#0f1115; --panel:#121623; --border:#232633; --ink:#e6e8ee; --muted:#9aa3ba;
-    --accent:#4a82ff; --ok:#8cff9a;
-    --hole:22px; --gap:6px; --peg:12px;
+    --bg:#f8f6f2;
+    --ink:#2c2b28;
+    --muted:#6e6a63;
+    --wood1:#e7d7c4;  /* light maple tones */
+    --wood2:#f3e6d7;
+    --wood3:#e9dccb;
+    --edge:#d7c7b2;
+    --accent:#2d7ff9;
+    --ok:#20a05a;
+
+    --hole:22px;
+    --gap:7px;
+    --peg:14px;
+    --trackCols:61;
   }
   *{box-sizing:border-box}
-  body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.45 system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial}
-  header{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center}
-  header h1{margin:0;font-size:16px;font-weight:600;letter-spacing:.2px}
-  .subtle{color:var(--muted);font-size:12px}
+  html,body{height:100%}
+  body{
+    margin:0; background:var(--bg); color:var(--ink);
+    font:15px/1.45 ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+  }
 
-  main{max-width:980px;margin:18px auto 42px;padding:0 16px;display:grid;gap:14px}
+  header{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:16px 18px 10px; border-bottom:1px solid #e9e2d8;
+  }
+  header h1{margin:0; font-weight:700; font-size:18px; letter-spacing:.2px}
+  .subtle{color:var(--muted); font-size:12px}
 
-  /* status */
-  .status{display:grid;grid-template-columns:1fr auto auto;gap:8px;align-items:center}
-  .chip{padding:6px 10px;border:1px solid var(--border);background:#141a2a;border-radius:10px;font-weight:600}
+  main{max-width:980px; margin:12px auto 40px; padding:0 16px; display:grid; gap:14px}
+
+  /* STATUS BAR */
+  .status{display:flex; gap:10px; align-items:center; flex-wrap:wrap}
+  .chip{
+    padding:8px 12px; border-radius:999px; border:1px solid #e9e2d8;
+    background:#fffefc; box-shadow:0 1px 0 rgba(0,0,0,.03);
+    font-weight:600;
+  }
   .mono{font-family:ui-monospace,Menlo,Consolas,monospace}
 
-  /* board */
-  .board{padding:14px;border:1px solid var(--border);border-radius:12px;background:var(--panel);display:grid;gap:14px}
-  .track-title{display:flex;justify-content:space-between;color:var(--muted);font-size:12px}
-  .track{display:grid;grid-template-columns:repeat(61,var(--hole));gap:var(--gap);place-items:center;justify-content:center}
-  .row2{margin-top:6px}
-  .hole{width:var(--hole);height:var(--hole);border-radius:50%;background:#2a2f41;outline:1px solid #0e1220;position:relative}
-  .hole[data-idx="0"]{box-shadow:0 0 0 2px #2f3b58 inset}
-  .hole[data-idx="121"]{background:#2d3147;outline:2px solid var(--ok)}
-  .peg{
-    position:absolute;width:var(--peg);height:var(--peg);border-radius:50%;
-    top:50%;left:50%;transform:translate(-50%,-50%);
-    box-shadow:0 0 0 2px rgba(0,0,0,.35);
-    animation:peg-pop .18s ease-out;
+  /* BOARD */
+  .board{
+    padding:14px; border-radius:14px; border:1px solid var(--edge);
+    background:
+      linear-gradient(90deg, rgba(255,255,255,.2) 0, transparent 30%),
+      linear-gradient(180deg, var(--wood2), var(--wood1));
+    box-shadow:0 6px 28px rgba(139,109,70,.18), inset 0 1px 0 rgba(255,255,255,.35);
+    display:grid; gap:14px;
   }
-  .p1.front{background:#ff4d4d}.p1.back{background:#ff9898}
-  .p2.front{background:#4da3ff}.p2.back{background:#9cc8ff}
-  @keyframes peg-pop{from{transform:translate(-50%,-50%) scale(.65);opacity:.65}to{transform:translate(-50%,-50%) scale(1);opacity:1}}
+  .track-title{display:flex; justify-content:space-between; font-size:12px; color:var(--muted)}
+  .track{
+    display:grid;
+    grid-template-columns:repeat(var(--trackCols), var(--hole));
+    gap:var(--gap);
+    place-items:center;
+    justify-content:center;
+  }
+  .row2{margin-top:8px}
 
-  /* controls */
-  .panel{padding:12px;border:1px solid var(--border);border-radius:12px;background:var(--panel);display:grid;gap:10px}
-  .row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
-  button{background:#182035;color:var(--ink);border:1px solid var(--border);border-radius:10px;padding:8px 12px;cursor:pointer;font-weight:600}
-  button.primary{background:var(--accent);border-color:#3a6fe0}
-  button:disabled{opacity:.5;cursor:not-allowed}
-  .badge{padding:3px 8px;border:1px solid var(--border);background:#141a2a;border-radius:999px;font-size:12px}
-  .seq{display:flex;gap:6px;flex-wrap:wrap;min-height:28px;padding:6px 8px;border:1px solid var(--border);background:#0e131f;border-radius:10px;font-family:ui-monospace,Consolas,monospace}
+  .hole{
+    width:var(--hole); height:var(--hole); border-radius:50%;
+    background:radial-gradient(circle at 35% 35%, #fff 0 15%, #c9b89f 55%, #ad9a7d 100%);
+    box-shadow:
+      inset 0 1px 1px rgba(255,255,255,.7),
+      inset 0 -1px 2px rgba(0,0,0,.15),
+      0 0 0 1px rgba(0,0,0,.05);
+    position:relative;
+  }
+  .hole[data-idx="121"]{outline:2px solid var(--ok); background:radial-gradient(circle at 35% 35%, #fff 0 15%, #cfead7 55%, #b6d9c0 100%)}
+  .hole[data-idx="0"]{outline:2px solid #aec2f9}
 
-  /* focus */
-  :focus-visible{outline:2px solid var(--ok);outline-offset:2px;border-radius:10px}
+  /* Peg sprites live in an overlay and MOVE between hole centers */
+  .peg-layer{position:relative}
+  .peg-sprite{
+    position:absolute; width:var(--peg); height:var(--peg); border-radius:50%;
+    transform:translate(-50%, -50%);
+    box-shadow:0 2px 0 rgba(0,0,0,.12), 0 8px 16px rgba(0,0,0,.15);
+    transition:left .28s ease, top .28s ease;
+  }
+  .p1.front{background:radial-gradient(circle at 30% 30%, #ff9aa0 0 20%, #ff4d5a 70%, #d1323c 100%)}
+  .p1.back {background:radial-gradient(circle at 30% 30%, #ffd0d3 0 20%, #ff8b95 70%, #c2565e 100%)}
+  .p2.front{background:radial-gradient(circle at 30% 30%, #9dc8ff 0 20%, #4da3ff 70%, #2e79d1 100%)}
+  .p2.back {background:radial-gradient(circle at 30% 30%, #d0e3ff 0 20%, #99c5ff 70%, #5186d6 100%)}
+
+  /* COUNTING LANE (0–31) */
+  .count-panel{
+    padding:10px 12px; border-radius:14px; border:1px solid var(--edge);
+    background:linear-gradient(180deg,#ffffff,#fbf8f4);
+    display:grid; gap:10px;
+  }
+  .count-title{display:flex; justify-content:space-between; font-size:12px; color:var(--muted)}
+  .count-lane{
+    display:grid; grid-template-columns:repeat(32, 18px); gap:6px; justify-content:center; align-items:center;
+  }
+  .pip{
+    width:18px; height:18px; border-radius:50%;
+    box-shadow:inset 0 1px 1px rgba(0,0,0,.08), 0 1px 0 rgba(255,255,255,.7);
+    background:#e9e2d8;
+  }
+  .pip.fill{ background:linear-gradient(180deg,#93d2a7,#64c087); }
+  .pip.mark15{ outline:2px dashed #9bb7ff; }
+  .count-big{font-weight:800; font-size:28px; letter-spacing:.5px}
+
+  /* CONTROLS */
+  .panel{
+    padding:12px; border-radius:14px; border:1px solid var(--edge);
+    background:linear-gradient(180deg,#ffffff,#fbf8f4);
+    display:grid; gap:10px;
+  }
+  .row{display:flex; flex-wrap:wrap; gap:8px; align-items:center}
+  button{
+    border-radius:12px; padding:9px 12px; border:1px solid #ded7cc; background:#fff; color:var(--ink);
+    box-shadow:0 1px 0 rgba(255,255,255,.7), 0 1px 0 rgba(0,0,0,.03);
+    cursor:pointer; font-weight:700;
+  }
+  button.primary{background:#2d7ff9; color:white; border-color:#2167ce; box-shadow:0 1px 0 rgba(255,255,255,.35), 0 8px 14px rgba(45,127,249,.25)}
+  button:disabled{opacity:.5; cursor:not-allowed}
+  .badge{
+    padding:6px 10px; border:1px solid #ede7de; background:#fff; border-radius:10px; font-size:13px;
+    box-shadow:0 1px 0 rgba(255,255,255,.6);
+  }
+  .seq{display:flex; gap:6px; flex-wrap:wrap; min-height:28px; padding:6px 8px; border:1px solid #ede7de; background:#fff; border-radius:10px; font-family:ui-monospace,Menlo,Consolas,monospace}
+
+  /* A..K chips */
+  .chipbtn{
+    border-radius:999px; padding:8px 10px; min-width:36px; text-align:center; font-weight:800;
+    border:1px solid #e6ded2; background:#ffffff;
+  }
+
+  /* Focus */
+  :focus-visible{outline:2px solid #a8d6ff; outline-offset:2px; border-radius:12px}
 </style>
 </head>
 <body>
 <header>
   <h1>Cribbage Trainer</h1>
-  <div class="subtle">ACC-faithful pegging • minimal UI</div>
+  <div class="subtle">warm board • real peg motion • ACC-faithful pegging</div>
 </header>
 
 <main>
-  <!-- Status -->
+  <!-- STATUS -->
   <div class="status">
-    <div class="chip">Dealer: <span id="dealerLbl">P2</span> • Pone: <span id="poneLbl">P1</span></div>
-    <div class="chip">Turn: <span id="turnLbl">P1</span></div>
+    <div class="chip">Dealer: <strong id="dealerLbl">P2</strong> • Pone: <strong id="poneLbl">P1</strong></div>
+    <div class="chip">Turn: <strong id="turnLbl">P1</strong></div>
     <div class="chip">Running <span class="mono" id="countLbl">0</span></div>
+    <div class="chip">Last: <span id="lastLbl">—</span></div>
   </div>
 
-  <!-- Pegboard -->
+  <!-- BOARD -->
   <section class="board" aria-label="Pegboard">
-    <div>
-      <div class="track-title"><span>P1 Track</span><span class="subtle">Game hole 121</span></div>
+    <div class="track-title"><span>P1 Track</span><span>Game hole 121</span></div>
+    <div class="peg-layer">
       <div class="track" id="p1r1"></div>
       <div class="track row2" id="p1r2"></div>
+      <div id="pegP1Front" class="peg-sprite p1 front"></div>
+      <div id="pegP1Back"  class="peg-sprite p1 back"></div>
     </div>
-    <div>
-      <div class="track-title"><span>P2 Track</span><span class="subtle">Game hole 121</span></div>
+
+    <div class="track-title"><span>P2 Track</span><span>Game hole 121</span></div>
+    <div class="peg-layer">
       <div class="track" id="p2r1"></div>
       <div class="track row2" id="p2r2"></div>
+      <div id="pegP2Front" class="peg-sprite p2 front"></div>
+      <div id="pegP2Back"  class="peg-sprite p2 back"></div>
     </div>
   </section>
 
-  <!-- Controls -->
+  <!-- COUNTING LANE -->
+  <section class="count-panel" aria-label="Running Count">
+    <div class="count-title"><span>Running count lane (0–31)</span><span class="count-big" id="countBig">0</span></div>
+    <div id="lane" class="count-lane"></div>
+  </section>
+
+  <!-- CONTROLS -->
   <section class="panel" aria-label="Controls">
     <div class="row">
-      <div class="badge">Starter: <span id="starterBadge">—</span></div>
+      <div class="badge">Starter: <strong id="starterBadge">—</strong></div>
       <button id="btnCut" class="primary" title="Cut the starter">Cut Starter</button>
       <button id="btnHeels" title="Dealer +2 if starter is a Jack">His Heels +2</button>
-
-      <span class="badge" id="lastScore">—</span>
-      <span style="margin-left:auto"></span>
-
+      <div style="margin-left:auto"></div>
       <button id="btnGo" title="If you cannot play, call Go">Go</button>
-      <button id="btnReset" title="Clear the current sequence">Reset Sequence</button>
+      <button id="btnReset" title="Clear the current sequence">Reset Seq</button>
       <button id="btnUndo">Undo</button>
       <button id="btnSwap" title="Swap dealer/pone">Swap Dealer</button>
       <button id="btnNew">New Game</button>
@@ -112,15 +206,14 @@
 </main>
 
 <script>
-/* ========== Core model (minimal: buttons A–K, no hands) ========== */
+/* ================== Model ================== */
 const label = r => ({11:'J',12:'Q',13:'K'}[r] || (r===1?'A':r));
-const val   = r => Math.min(r, 10);
+const val   = r => Math.min(r,10);
 
 const P1 = { id:'P1', front:0, back:0 };
 const P2 = { id:'P2', front:0, back:0 };
 
 let dealer=P2, pone=P1, leader=pone, turn=leader;
-
 let starter=null, heelsAvailable=false;
 let seq=[], running=0;
 let go={active:false, caller:null, lastPlayer:null};
@@ -128,48 +221,80 @@ let gameOver=false;
 
 const undo=[];
 
-/* ---------- DOM ---------- */
+/* ================== DOM ================== */
 const p1r1=document.getElementById('p1r1'), p1r2=document.getElementById('p1r2');
 const p2r1=document.getElementById('p2r1'), p2r2=document.getElementById('p2r2');
 const dealerLbl=document.getElementById('dealerLbl'), poneLbl=document.getElementById('poneLbl');
-const turnLbl=document.getElementById('turnLbl'), countLbl=document.getElementById('countLbl');
-const starterBadge=document.getElementById('starterBadge'), lastScore=document.getElementById('lastScore');
+const turnLbl=document.getElementById('turnLbl'), countLbl=document.getElementById('countLbl'), countBig=document.getElementById('countBig');
+const lastLbl=document.getElementById('lastLbl'), starterBadge=document.getElementById('starterBadge');
 const seqEl=document.getElementById('seq'), cardRow=document.getElementById('cardRow');
 const btnCut=document.getElementById('btnCut'), btnHeels=document.getElementById('btnHeels');
 const btnGo=document.getElementById('btnGo'), btnReset=document.getElementById('btnReset');
 const btnUndo=document.getElementById('btnUndo'), btnSwap=document.getElementById('btnSwap');
 const btnNew=document.getElementById('btnNew');
+const lane=document.getElementById('lane');
 
-/* ---------- Board ---------- */
+const pegP1F=document.getElementById('pegP1Front'), pegP1B=document.getElementById('pegP1Back');
+const pegP2F=document.getElementById('pegP2Front'), pegP2B=document.getElementById('pegP2Back');
+
+/* ================== Board Build ================== */
 function buildRow(container, from, to){
   container.innerHTML='';
   for(let i=from;i<=to;i++){
     const h=document.createElement('div'); h.className='hole'; h.dataset.idx=i; container.appendChild(h);
   }
 }
-function hole(player, idx){
-  const rows=(player===P1)?[p1r1,p1r2]:[p2r1,p2r2];
-  const row=(idx<=60)?rows[0]:rows[1];
+function holeEl(player, idx){
+  const topRow = (player===P1) ? p1r1 : p2r1;
+  const botRow = (player===P1) ? p1r2 : p2r2;
+  const row = (idx<=60) ? topRow : botRow;
   return row.querySelector(`.hole[data-idx="${idx}"]`);
 }
-function drawPegs(){
-  [p1r1,p1r2,p2r1,p2r2].forEach(c=>c.querySelectorAll('.peg').forEach(p=>p.remove()));
-  [['front','p1 front'],['back','p1 back']].forEach(([w,cls])=>{
-    const el=hole(P1,P1[w]); const peg=document.createElement('div'); peg.className=`peg ${cls}`; el.appendChild(peg);
-  });
-  [['front','p2 front'],['back','p2 back']].forEach(([w,cls])=>{
-    const el=hole(P2,P2[w]); const peg=document.createElement('div'); peg.className=`peg ${cls}`; el.appendChild(peg);
+function centerOf(el){
+  const r = el.getBoundingClientRect();
+  const pr = el.offsetParent.getBoundingClientRect();
+  return { left: (r.left + r.width/2) - pr.left, top: (r.top + r.height/2) - pr.top };
+}
+function placePegSprites(){
+  [ [P1,pegP1F,pegP1B], [P2,pegP2F,pegP2B] ].forEach(([pl, pf, pb])=>{
+    const fC = centerOf(holeEl(pl, pl.front));
+    pf.style.left = fC.left + 'px'; pf.style.top = fC.top + 'px';
+    const bC = centerOf(holeEl(pl, pl.back));
+    pb.style.left = bC.left + 'px'; pb.style.top = bC.top + 'px';
   });
 }
+function redrawAll(){
+  dealerLbl.textContent=dealer.id; poneLbl.textContent=pone.id; turnLbl.textContent=turn.id;
+  countLbl.textContent=running; countBig.textContent=running;
+  seqEl.innerHTML = seq.map(c=>`<span class="badge mono">${c.player.id}:${label(c.rank)}(${c.value})</span>`).join('');
+  starterBadge.textContent = starter ? `${label(starter.rank)}${starter.suit}` : '—';
+  btnHeels.disabled = !(starter && starter.rank===11 && heelsAvailable) || gameOver;
+  btnGo.disabled = gameOver || seq.length===0;
+  btnUndo.disabled = undo.length===0 || gameOver;
+  fillLane();
+  placePegSprites();
+}
 
-/* ---------- UI ---------- */
+/* ================== Counting Lane 0–31 ================== */
+function buildLane(){
+  lane.innerHTML='';
+  for(let i=0;i<=31;i++){
+    const p=document.createElement('div'); p.className='pip'; if(i===15) p.classList.add('mark15');
+    lane.appendChild(p);
+  }
+}
+function fillLane(){
+  const pips = lane.querySelectorAll('.pip');
+  pips.forEach((p,i)=> p.classList.toggle('fill', i>0 && i<=running));
+}
+
+/* ================== Undo Snapshots ================== */
 function snapshot(label=''){
   undo.push({
     label, P1:{...P1}, P2:{...P2},
     leader:leader.id, dealer:dealer.id, pone:pone.id, turn:turn.id,
     starter: starter?{...starter}:null, heelsAvailable,
-    seq:[...seq], running, go:{...go},
-    last:lastScore.textContent, gameOver
+    seq:[...seq], running, go:{...go}, last:lastLbl.textContent, gameOver
   });
   btnUndo.disabled=false;
 }
@@ -177,31 +302,40 @@ function restore(s){
   Object.assign(P1,s.P1); Object.assign(P2,s.P2);
   leader=(s.leader==='P1')?P1:P2; dealer=(s.dealer==='P1')?P1:P2; pone=(s.pone==='P1')?P1:P2; turn=(s.turn==='P1')?P1:P2;
   starter=s.starter?{...s.starter}:null; heelsAvailable=s.heelsAvailable;
-  seq=[...s.seq]; running=s.running; go={...s.go};
-  lastScore.textContent=s.last; gameOver=s.gameOver;
-  refresh();
-}
-function refresh(){
-  dealerLbl.textContent=dealer.id; poneLbl.textContent=pone.id; turnLbl.textContent=turn.id; countLbl.textContent=running;
-  drawPegs();
-  starterBadge.textContent = starter ? `${label(starter.rank)}${starter.suit}` : '—';
-  btnHeels.disabled = !(starter && starter.rank===11 && heelsAvailable) || gameOver;
-  btnGo.disabled = gameOver || seq.length===0; // minimal trainer: user decides when "Go" applies
-  btnUndo.disabled = undo.length===0 || gameOver;
-  seqEl.innerHTML = seq.map(c=>`<span class="badge mono">${c.player.id}:${label(c.rank)}(${c.value})</span>`).join('');
+  seq=[...s.seq]; running=s.running; go={...s.go}; lastLbl.textContent=s.last; gameOver=s.gameOver;
+  redrawAll();
 }
 
-/* ---------- Rules ---------- */
-function leapfrog(player, points, why=''){
+/* ================== Peg Motion (animated leapfrog) ================== */
+function animateLeapfrog(player, points, reason=''){
   if(points<=0) return;
-  const target = Math.min(121, player.back + points);
-  player.back = target;
-  [player.front, player.back] = [player.back, player.front]; // only back peg moves, then becomes front
-  lastScore.textContent = `${player.id} +${points} ${why}`;
-  if(player.front>=121){ gameOver=true; lastScore.textContent = `${player.id} pegs out`; }
+  snapshot(`peg ${player.id} +${points} ${reason}`);
+  const fromIdx = player.back;
+  const toIdx = Math.min(121, fromIdx + points);
+
+  // Move the BACK sprite to the destination
+  const sprite = (player===P1) ? pegP1B : pegP2B;
+  const targetCenter = centerOf(holeEl(player, toIdx));
+  sprite.style.left = targetCenter.left + 'px';
+  sprite.style.top  = targetCenter.top  + 'px';
+
+  // After the transition, swap roles and finalize
+  sprite.addEventListener('transitionend', onDone, {once:true});
+  function onDone(){
+    player.back = toIdx;
+    // swap front/back roles in model
+    [player.front, player.back] = [player.back, player.front];
+
+    // Ensure both sprites are snapped to their new holes
+    placePegSprites();
+
+    lastLbl.textContent = `${player.id} +${points}${reason?` ${reason}`:''}`;
+    if(player.front>=121){ gameOver=true; lastLbl.textContent = `${player.id} pegs out`; }
+  }
 }
+
+/* ================== Scoring Helpers ================== */
 function scoreRunTail(arr){
-  // longest tail run k>=3; unique ranks and consecutive values (A low)
   let best=0;
   for(let k=arr.length;k>=3;k--){
     const t=arr.slice(-k).map(x=>x.rank);
@@ -211,6 +345,8 @@ function scoreRunTail(arr){
   }
   return best;
 }
+
+/* ================== Play Flow ================== */
 function playCard(rank){
   if(gameOver) return;
   const value = val(rank);
@@ -218,107 +354,106 @@ function playCard(rank){
 
   snapshot(`play ${turn.id} ${label(rank)}`);
 
-  // first play => heels window closes
-  if(heelsAvailable) heelsAvailable=false;
+  if(heelsAvailable) heelsAvailable=false; // first card played forfeits heels if not taken
 
-  // register play
   seq.push({player:turn, rank, value});
-  running += value;
-  go.lastPlayer = turn;
+  running += value; go.lastPlayer = turn;
 
   // pairs / trips / quads
   let same=1;
   for(let i=seq.length-2;i>=0;i--){ if(seq[i].rank===rank) same++; else break; }
-  if(same===2) leapfrog(turn,2,'Pair +2');
-  else if(same===3) leapfrog(turn,6,'Pair Royal +6');
-  else if(same===4) leapfrog(turn,12,'Double Pair Royal +12');
+  if(same===2) animateLeapfrog(turn,2,'(Pair +2)');
+  else if(same===3) animateLeapfrog(turn,6,'(Pair Royal +6)');
+  else if(same===4) animateLeapfrog(turn,12,'(Double Pair Royal +12)');
 
   // runs
-  const runPts=scoreRunTail(seq);
-  if(runPts>0) leapfrog(turn,runPts,`Run ${runPts} +${runPts}`);
+  const runPts = scoreRunTail(seq);
+  if(runPts>0) animateLeapfrog(turn, runPts, `(Run ${runPts} +${runPts})`);
 
   // 15 / 31
-  if(running===15) leapfrog(turn,2,'Fifteen +2');
-  if(running===31) leapfrog(turn,2,'Thirty-one +2');
+  if(running===15) animateLeapfrog(turn,2,'(Fifteen +2)');
+  if(running===31) animateLeapfrog(turn,2,'(Thirty-one +2)');
 
   // turn logic
   if(running===31){
     seq=[]; running=0; go={active:false,caller:null,lastPlayer:null};
     leader = (turn===P1)?P2:P1; turn = leader;
-  }else{
+  } else {
     if(go.active){
-      // opponent of caller keeps playing (multi-plays)
-      turn = (go.caller===P1)?P2:P1;
-    }else{
-      // normal alternation
+      turn = (go.caller===P1)?P2:P1; // opponent of go-caller may keep playing
+    } else {
       turn = (turn===P1)?P2:P1;
     }
   }
-  refresh();
+  redrawAll();
 }
 
-/* ---------- Controls ---------- */
+/* ================== Controls ================== */
 btnCut.onclick = ()=>{
   if(gameOver) return;
   snapshot('cut');
   const suits=['♣','♦','♥','♠']; const r=1+Math.floor(Math.random()*13); const s=suits[Math.floor(Math.random()*4)];
   starter = {rank:r, suit:s};
   heelsAvailable = (r===11);
-  refresh();
+  redrawAll();
 };
 btnHeels.onclick = ()=>{
   if(!(starter && starter.rank===11 && heelsAvailable) || gameOver) return;
-  snapshot('heels');
-  leapfrog(dealer,2,'His Heels +2'); heelsAvailable=false; refresh();
+  animateLeapfrog(dealer,2,'(His Heels +2)'); heelsAvailable=false; redrawAll();
 };
 btnGo.onclick = ()=>{
   if(gameOver || seq.length===0) return;
   snapshot('go');
   if(go.active){
-    if(running!==31 && go.lastPlayer) leapfrog(go.lastPlayer,1,'Last card +1');
+    if(running!==31 && go.lastPlayer) animateLeapfrog(go.lastPlayer,1,'(Last card +1)');
     seq=[]; running=0; leader = go.caller; turn = leader; go={active:false,caller:null,lastPlayer:null};
   }else{
     go={active:true, caller:turn, lastPlayer:go.lastPlayer};
     turn = (turn===P1)?P2:P1;
   }
-  refresh();
+  redrawAll();
 };
 btnReset.onclick = ()=>{
   if(gameOver) return;
   snapshot('reset');
-  seq=[]; running=0; go={active:false,caller:null,lastPlayer:null}; turn=leader; refresh();
+  seq=[]; running=0; turn=leader; go={active:false,caller:null,lastPlayer:null};
+  redrawAll();
 };
 btnUndo.onclick = ()=>{
   if(undo.length===0 || gameOver) return;
   const s=undo.pop(); restore(s);
 };
 btnSwap.onclick = ()=>{
-  snapshot('swap');
+  snapshot('swap dealer');
   [dealer,pone] = (dealer===P1)?[P2,P1]:[P1,P2];
-  leader=pone; turn=leader; refresh();
+  leader=pone; turn=leader; redrawAll();
 };
 btnNew.onclick = ()=>{
-  undo.length=0;
-  Object.assign(P1,{front:0,back:0}); Object.assign(P2,{front:0,back:0});
-  starter=null; heelsAvailable=false;
-  seq=[]; running=0; go={active:false,caller:null,lastPlayer:null};
-  dealer=P2; pone=P1; leader=pone; turn=leader; gameOver=false; lastScore.textContent='—';
-  refresh();
+  undo.length=0; Object.assign(P1,{front:0,back:0}); Object.assign(P2,{front:0,back:0});
+  starter=null; heelsAvailable=false; seq=[]; running=0; go={active:false,caller:null,lastPlayer:null};
+  dealer=P2; pone=P1; leader=pone; turn=leader; gameOver=false; lastLbl.textContent='—';
+  redrawAll();
 };
 
-/* ---------- Card row (A..K) ---------- */
+/* ================== Card Bar (A..K) ================== */
 (function buildCardRow(){
   const ranks=[1,2,3,4,5,6,7,8,9,10,11,12,13];
   ranks.forEach(r=>{
-    const b=document.createElement('button'); b.textContent=label(r); b.title=`Play ${label(r)}`; b.onclick=()=>playCard(r);
+    const b=document.createElement('button'); b.className='chipbtn'; b.textContent=label(r); b.onclick=()=>playCard(r);
     cardRow.appendChild(b);
   });
 })();
 
-/* ---------- Boot ---------- */
-buildRow(p1r1,0,60); buildRow(p1r2,61,121);
-buildRow(p2r1,0,60); buildRow(p2r2,61,121);
-drawPegs(); refresh();
+/* ================== Boot & Layout ================== */
+function buildBoard(){
+  buildRow(p1r1,0,60); buildRow(p1r2,61,121);
+  buildRow(p2r1,0,60); buildRow(p2r2,61,121);
+}
+buildBoard();
+buildLane();
+window.addEventListener('resize', placePegSprites);
+placePegSprites();
+redrawAll();
 </script>
 </body>
 </html>
