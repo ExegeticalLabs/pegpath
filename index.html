@@ -3,457 +3,596 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Cribbage Trainer — Light, Friendly, ACC-faithful</title>
+<title>Cribbage Trainer (ACC-faithful)</title>
 <style>
   :root{
-    --bg:#f8f6f2;
-    --ink:#2c2b28;
-    --muted:#6e6a63;
-    --wood1:#e7d7c4;  /* light maple tones */
-    --wood2:#f3e6d7;
-    --wood3:#e9dccb;
-    --edge:#d7c7b2;
-    --accent:#2d7ff9;
-    --ok:#20a05a;
-
     --hole:22px;
-    --gap:7px;
-    --peg:14px;
-    --trackCols:61;
+    --gap:6px;
+    --peg:12px;
+    --track-width: calc((var(--hole) + var(--gap)) * 61);
   }
   *{box-sizing:border-box}
-  html,body{height:100%}
-  body{
-    margin:0; background:var(--bg); color:var(--ink);
-    font:15px/1.45 ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+  body{font-family:system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif;background:#0f1115;color:#e6e8ee;margin:0}
+  header{padding:16px 20px;border-bottom:1px solid #232633;display:flex;gap:16px;align-items:center;flex-wrap:wrap}
+  header h1{font-size:18px;margin:0;font-weight:600;letter-spacing:.2px}
+  header .pill{background:#1a1e2b;border:1px solid #2a2f41;border-radius:999px;padding:6px 10px;font-size:12px}
+  main{max-width:1100px;margin:20px auto;padding:0 16px 40px}
+  .row{display:flex;gap:16px;align-items:center;flex-wrap:wrap;margin-bottom:12px}
+  .box{background:#121623;border:1px solid #232633;border-radius:10px;padding:12px}
+  .controls{display:flex;gap:12px;flex-wrap:wrap}
+  .controls .group{display:flex;gap:8px;align-items:center}
+  button,select,input[type="number"]{
+    background:#182035;color:#e6e8ee;border:1px solid #2a2f41;border-radius:8px;
+    padding:8px 10px;font:inherit;cursor:pointer
   }
-
-  header{
-    display:flex; align-items:center; justify-content:space-between;
-    padding:16px 18px 10px; border-bottom:1px solid #e9e2d8;
-  }
-  header h1{margin:0; font-weight:700; font-size:18px; letter-spacing:.2px}
-  .subtle{color:var(--muted); font-size:12px}
-
-  main{max-width:980px; margin:12px auto 40px; padding:0 16px; display:grid; gap:14px}
-
-  /* STATUS BAR */
-  .status{display:flex; gap:10px; align-items:center; flex-wrap:wrap}
-  .chip{
-    padding:8px 12px; border-radius:999px; border:1px solid #e9e2d8;
-    background:#fffefc; box-shadow:0 1px 0 rgba(0,0,0,.03);
-    font-weight:600;
-  }
-  .mono{font-family:ui-monospace,Menlo,Consolas,monospace}
-
-  /* BOARD */
-  .board{
-    padding:14px; border-radius:14px; border:1px solid var(--edge);
-    background:
-      linear-gradient(90deg, rgba(255,255,255,.2) 0, transparent 30%),
-      linear-gradient(180deg, var(--wood2), var(--wood1));
-    box-shadow:0 6px 28px rgba(139,109,70,.18), inset 0 1px 0 rgba(255,255,255,.35);
-    display:grid; gap:14px;
-  }
-  .track-title{display:flex; justify-content:space-between; font-size:12px; color:var(--muted)}
+  button:disabled{opacity:.5;cursor:not-allowed}
+  input[type="number"]{width:76px}
+  .toggle{display:flex;align-items:center;gap:6px}
+  .kbd{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;padding:2px 6px;border:1px solid #2a2f41;border-radius:6px;background:#0e131f}
+  .status{display:flex;gap:16px;flex-wrap:wrap}
+  .status .card{padding:10px 12px;border-radius:10px;background:#141a2a;border:1px solid #262b3e}
+  .status .big{font-size:22px;font-weight:700}
+  .board-wrap{margin-top:10px;display:grid;grid-template-columns:1fr;gap:20px}
   .track{
-    display:grid;
-    grid-template-columns:repeat(var(--trackCols), var(--hole));
-    gap:var(--gap);
-    place-items:center;
-    justify-content:center;
+    width:100%;max-width:var(--track-width);padding:12px;border-radius:12px;
+    background:#111522;border:1px solid #232633;position:relative;margin-inline:auto
   }
-  .row2{margin-top:8px}
-
+  .track .label{position:absolute;top:6px;right:10px;font-size:12px;color:#9aa3ba}
+  .holes{display:grid;grid-template-columns:repeat(61, var(--hole));gap:var(--gap);place-items:center}
   .hole{
-    width:var(--hole); height:var(--hole); border-radius:50%;
-    background:radial-gradient(circle at 35% 35%, #fff 0 15%, #c9b89f 55%, #ad9a7d 100%);
-    box-shadow:
-      inset 0 1px 1px rgba(255,255,255,.7),
-      inset 0 -1px 2px rgba(0,0,0,.15),
-      0 0 0 1px rgba(0,0,0,.05);
-    position:relative;
+    width:var(--hole);height:var(--hole);border-radius:50%;background:#2a2f41;position:relative;
+    outline:1px solid #121623;
   }
-  .hole[data-idx="121"]{outline:2px solid var(--ok); background:radial-gradient(circle at 35% 35%, #fff 0 15%, #cfead7 55%, #b6d9c0 100%)}
-  .hole[data-idx="0"]{outline:2px solid #aec2f9}
-
-  /* Peg sprites live in an overlay and MOVE between hole centers */
-  .peg-layer{position:relative}
-  .peg-sprite{
-    position:absolute; width:var(--peg); height:var(--peg); border-radius:50%;
-    transform:translate(-50%, -50%);
-    box-shadow:0 2px 0 rgba(0,0,0,.12), 0 8px 16px rgba(0,0,0,.15);
-    transition:left .28s ease, top .28s ease;
+  .hole[data-idx="0"]{box-shadow:0 0 0 2px #2f3b58 inset}
+  .hole[data-idx="121"]{background:#2d3147;outline:2px solid #8cff9a}
+  .peg{
+    position:absolute;width:var(--peg);height:var(--peg);border-radius:50%;top:50%;left:50%;
+    transform:translate(-50%,-50%);box-shadow:0 0 0 2px rgba(0,0,0,.35)
   }
-  .p1.front{background:radial-gradient(circle at 30% 30%, #ff9aa0 0 20%, #ff4d5a 70%, #d1323c 100%)}
-  .p1.back {background:radial-gradient(circle at 30% 30%, #ffd0d3 0 20%, #ff8b95 70%, #c2565e 100%)}
-  .p2.front{background:radial-gradient(circle at 30% 30%, #9dc8ff 0 20%, #4da3ff 70%, #2e79d1 100%)}
-  .p2.back {background:radial-gradient(circle at 30% 30%, #d0e3ff 0 20%, #99c5ff 70%, #5186d6 100%)}
-
-  /* COUNTING LANE (0–31) */
-  .count-panel{
-    padding:10px 12px; border-radius:14px; border:1px solid var(--edge);
-    background:linear-gradient(180deg,#ffffff,#fbf8f4);
-    display:grid; gap:10px;
-  }
-  .count-title{display:flex; justify-content:space-between; font-size:12px; color:var(--muted)}
-  .count-lane{
-    display:grid; grid-template-columns:repeat(32, 18px); gap:6px; justify-content:center; align-items:center;
-  }
-  .pip{
-    width:18px; height:18px; border-radius:50%;
-    box-shadow:inset 0 1px 1px rgba(0,0,0,.08), 0 1px 0 rgba(255,255,255,.7);
-    background:#e9e2d8;
-  }
-  .pip.fill{ background:linear-gradient(180deg,#93d2a7,#64c087); }
-  .pip.mark15{ outline:2px dashed #9bb7ff; }
-  .count-big{font-weight:800; font-size:28px; letter-spacing:.5px}
-
-  /* CONTROLS */
-  .panel{
-    padding:12px; border-radius:14px; border:1px solid var(--edge);
-    background:linear-gradient(180deg,#ffffff,#fbf8f4);
-    display:grid; gap:10px;
-  }
-  .row{display:flex; flex-wrap:wrap; gap:8px; align-items:center}
-  button{
-    border-radius:12px; padding:9px 12px; border:1px solid #ded7cc; background:#fff; color:var(--ink);
-    box-shadow:0 1px 0 rgba(255,255,255,.7), 0 1px 0 rgba(0,0,0,.03);
-    cursor:pointer; font-weight:700;
-  }
-  button.primary{background:#2d7ff9; color:white; border-color:#2167ce; box-shadow:0 1px 0 rgba(255,255,255,.35), 0 8px 14px rgba(45,127,249,.25)}
-  button:disabled{opacity:.5; cursor:not-allowed}
-  .badge{
-    padding:6px 10px; border:1px solid #ede7de; background:#fff; border-radius:10px; font-size:13px;
-    box-shadow:0 1px 0 rgba(255,255,255,.6);
-  }
-  .seq{display:flex; gap:6px; flex-wrap:wrap; min-height:28px; padding:6px 8px; border:1px solid #ede7de; background:#fff; border-radius:10px; font-family:ui-monospace,Menlo,Consolas,monospace}
-
-  /* A..K chips */
-  .chipbtn{
-    border-radius:999px; padding:8px 10px; min-width:36px; text-align:center; font-weight:800;
-    border:1px solid #e6ded2; background:#ffffff;
-  }
-
-  /* Focus */
-  :focus-visible{outline:2px solid #a8d6ff; outline-offset:2px; border-radius:12px}
+  .p1.front{background:#ff4d4d}
+  .p1.back{background:#ff9c9c}
+  .p2.front{background:#4da3ff}
+  .p2.back{background:#99caff}
+  .running{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  .seq{font-family:ui-monospace,Consolas,monospace;background:#0e131f;border:1px solid #2a2f41;padding:6px 8px;border-radius:8px;min-height:32px;display:flex;gap:6px;flex-wrap:wrap}
+  .badge{padding:3px 6px;border-radius:6px;background:#1a2237;border:1px solid #2a2f41;font-size:12px}
+  .hint{color:#9aa3ba;font-size:12px}
+  .hr{height:1px;background:#232633;margin:14px 0}
+  .grid{display:grid;grid-template-columns:repeat(13,1fr);gap:6px}
+  .cardbtn{padding:10px 0}
+  .muted{color:#aeb6cc}
+  .ok{color:#8cff9a}
+  .warn{color:#ffb86b}
+  .err{color:#ff6b6b}
 </style>
 </head>
 <body>
 <header>
   <h1>Cribbage Trainer</h1>
-  <div class="subtle">warm board • real peg motion • ACC-faithful pegging</div>
+  <span class="pill">ACC-faithful movement & play scoring</span>
 </header>
-
 <main>
-  <!-- STATUS -->
-  <div class="status">
-    <div class="chip">Dealer: <strong id="dealerLbl">P2</strong> • Pone: <strong id="poneLbl">P1</strong></div>
-    <div class="chip">Turn: <strong id="turnLbl">P1</strong></div>
-    <div class="chip">Running <span class="mono" id="countLbl">0</span></div>
-    <div class="chip">Last: <span id="lastLbl">—</span></div>
+
+  <!-- Top status -->
+  <div class="row status">
+    <div class="card">
+      <div>Dealer: <span id="dealerLabel">P2</span> &nbsp;|&nbsp; Pone leads: <span id="leaderLabel">P1</span></div>
+      <div class="hint">Use “Swap Dealer” between games. Pone always leads each play sequence.</div>
+    </div>
+    <div class="card">
+      <div>Running Count</div>
+      <div class="big" id="runningCount">0</div>
+    </div>
+    <div class="card">
+      <div>Turn</div>
+      <div class="big" id="turnLabel">P1</div>
+    </div>
+    <div class="card">
+      <div>Last Score</div>
+      <div class="big" id="lastScore">—</div>
+    </div>
   </div>
 
-  <!-- BOARD -->
-  <section class="board" aria-label="Pegboard">
-    <div class="track-title"><span>P1 Track</span><span>Game hole 121</span></div>
-    <div class="peg-layer">
-      <div class="track" id="p1r1"></div>
-      <div class="track row2" id="p1r2"></div>
-      <div id="pegP1Front" class="peg-sprite p1 front"></div>
-      <div id="pegP1Back"  class="peg-sprite p1 back"></div>
+  <!-- Tracks -->
+  <div class="board-wrap">
+    <div class="track" id="trackP1">
+      <div class="label">P1 Track</div>
+      <div class="holes" id="holesP1"></div>
     </div>
-
-    <div class="track-title"><span>P2 Track</span><span>Game hole 121</span></div>
-    <div class="peg-layer">
-      <div class="track" id="p2r1"></div>
-      <div class="track row2" id="p2r2"></div>
-      <div id="pegP2Front" class="peg-sprite p2 front"></div>
-      <div id="pegP2Back"  class="peg-sprite p2 back"></div>
+    <div class="track" id="trackP2">
+      <div class="label">P2 Track</div>
+      <div class="holes" id="holesP2"></div>
     </div>
-  </section>
+  </div>
 
-  <!-- COUNTING LANE -->
-  <section class="count-panel" aria-label="Running Count">
-    <div class="count-title"><span>Running count lane (0–31)</span><span class="count-big" id="countBig">0</span></div>
-    <div id="lane" class="count-lane"></div>
-  </section>
-
-  <!-- CONTROLS -->
-  <section class="panel" aria-label="Controls">
+  <!-- Play controls -->
+  <div class="box" style="margin-top:18px">
     <div class="row">
-      <div class="badge">Starter: <strong id="starterBadge">—</strong></div>
-      <button id="btnCut" class="primary" title="Cut the starter">Cut Starter</button>
-      <button id="btnHeels" title="Dealer +2 if starter is a Jack">His Heels +2</button>
-      <div style="margin-left:auto"></div>
-      <button id="btnGo" title="If you cannot play, call Go">Go</button>
-      <button id="btnReset" title="Clear the current sequence">Reset Seq</button>
-      <button id="btnUndo">Undo</button>
-      <button id="btnSwap" title="Swap dealer/pone">Swap Dealer</button>
-      <button id="btnNew">New Game</button>
+      <strong>Play Phase</strong>
+      <span class="hint">Click a card for the player whose turn it is. Scoring (pairs/runs/15/31/go/last) pegs automatically.</span>
+    </div>
+
+    <div class="row running">
+      <div>Sequence:</div>
+      <div class="seq" id="seqView"></div>
     </div>
 
     <div class="row">
-      <div class="badge">Current sequence</div>
-      <div id="seq" class="seq" aria-live="polite"></div>
-    </div>
+      <div class="controls" style="width:100%">
+        <div class="group" style="flex:1; min-width:260px">
+          <div style="width:100%">
+            <div class="grid">
+              <!-- A..K as rank buttons (value = min(10, rank)) -->
+              <button class="cardbtn" data-rank="1">A</button>
+              <button class="cardbtn" data-rank="2">2</button>
+              <button class="cardbtn" data-rank="3">3</button>
+              <button class="cardbtn" data-rank="4">4</button>
+              <button class="cardbtn" data-rank="5">5</button>
+              <button class="cardbtn" data-rank="6">6</button>
+              <button class="cardbtn" data-rank="7">7</button>
+              <button class="cardbtn" data-rank="8">8</button>
+              <button class="cardbtn" data-rank="9">9</button>
+              <button class="cardbtn" data-rank="10">10</button>
+              <button class="cardbtn" data-rank="11">J</button>
+              <button class="cardbtn" data-rank="12">Q</button>
+              <button class="cardbtn" data-rank="13">K</button>
+            </div>
+            <div class="hint" style="margin-top:6px">Face cards count 10 for the running total; rank still counts for pairs/runs.</div>
+          </div>
+        </div>
 
-    <div class="row">
-      <div class="badge">Play a card</div>
-      <div id="cardRow" class="row"></div>
+        <div class="group">
+          <button id="btnGo">Go</button>
+          <button id="btnResetSeq">Reset Sequence</button>
+        </div>
+
+        <div class="group">
+          <button id="btnHeels">His Heels (+2 to Dealer)</button>
+        </div>
+
+        <div class="group">
+          <button id="btnUndo">Undo last action</button>
+          <button id="btnNewGame">New Game</button>
+          <button id="btnSwapDealer">Swap Dealer</button>
+        </div>
+
+        <div class="group toggle">
+          <input type="checkbox" id="chkMuggins">
+          <label for="chkMuggins">Muggins (manual award)</label>
+          <button id="btnMuggins" disabled>Give Muggins +X</button>
+          <input type="number" id="mugginsPts" value="2" min="1" step="1" disabled>
+        </div>
+      </div>
     </div>
-  </section>
+  </div>
+
+  <!-- Counting phase -->
+  <div class="box" style="margin-top:18px">
+    <div class="row">
+      <strong>Counting Phase</strong>
+      <span class="hint">Order: Pone hand → Dealer hand → Crib. Zero hand/crib = no peg movement.</span>
+    </div>
+    <div class="controls">
+      <div class="group">
+        <button id="btnStartCount">Start Counting</button>
+        <div class="badge" id="countStage">Not started</div>
+      </div>
+      <div class="group">
+        <label>Pone hand</label>
+        <input type="number" id="poneHand" min="0" step="1" value="0"/>
+        <button id="btnCountPone" disabled>Peg Pone</button>
+      </div>
+      <div class="group">
+        <label>Dealer hand</label>
+        <input type="number" id="dealerHand" min="0" step="1" value="0"/>
+        <button id="btnCountDealer" disabled>Peg Dealer</button>
+      </div>
+      <div class="group">
+        <label>Crib (Dealer)</label>
+        <input type="number" id="cribPoints" min="0" step="1" value="0"/>
+        <button id="btnCountCrib" disabled>Peg Crib</button>
+      </div>
+      <div class="group">
+        <span class="hint">Tip: enable Muggins to manually assign missed points.</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scores -->
+  <div class="box" style="margin-top:18px">
+    <div class="row">
+      <strong>Scores</strong>
+      <div class="badge">P1: <span id="scoreP1">0</span></div>
+      <div class="badge">P2: <span id="scoreP2">0</span></div>
+      <div class="badge">Game Hole: 121</div>
+      <div id="gameMsg" class="badge muted">—</div>
+    </div>
+    <div class="hr"></div>
+    <div class="hint">
+      ACC movement: Only the <em>back</em> peg moves forward by the points scored and becomes the new front. The other peg remains where it was.
+      Final card (+1) applies only for the last card of a sequence that is not 31. After “go”, the go-caller leads the next sequence.
+    </div>
+  </div>
+
 </main>
 
 <script>
-/* ================== Model ================== */
-const label = r => ({11:'J',12:'Q',13:'K'}[r] || (r===1?'A':r));
-const val   = r => Math.min(r,10);
+/* ------------------ Core State ------------------ */
+const holes = 121; // 0..121; 121 is game hole
+const P1 = { id:'P1', track:'holesP1', front:0, back:0, lastMove:0 };
+const P2 = { id:'P2', track:'holesP2', front:0, back:0, lastMove:0 };
+let dealer = P2;   // default: P2 dealer, so P1 is pone and leads
+let pone = P1;
+let leader = pone; // who leads the next sequence
+let turn = leader; // whose turn to play a card
+let sequence = []; // cards in the current counting sequence: {player, rank, value}
+let running = 0;
+let heelsAvailable = true; // until first card is played
+let goState = { active:false, caller:null, lastPlayer:null }; // handle GO flow
+let gameOver = false;
+const actionStack = []; // for undo (self-correction)
 
-const P1 = { id:'P1', front:0, back:0 };
-const P2 = { id:'P2', front:0, back:0 };
+/* ------------------ DOM ------------------ */
+const holesP1 = document.getElementById('holesP1');
+const holesP2 = document.getElementById('holesP2');
+const dealerLabel = document.getElementById('dealerLabel');
+const leaderLabel = document.getElementById('leaderLabel');
+const turnLabel = document.getElementById('turnLabel');
+const runningCountEl = document.getElementById('runningCount');
+const seqView = document.getElementById('seqView');
+const lastScoreEl = document.getElementById('lastScore');
+const scoreP1 = document.getElementById('scoreP1');
+const scoreP2 = document.getElementById('scoreP2');
+const gameMsg = document.getElementById('gameMsg');
 
-let dealer=P2, pone=P1, leader=pone, turn=leader;
-let starter=null, heelsAvailable=false;
-let seq=[], running=0;
-let go={active:false, caller:null, lastPlayer:null};
-let gameOver=false;
+const btnGo = document.getElementById('btnGo');
+const btnResetSeq = document.getElementById('btnResetSeq');
+const btnHeels = document.getElementById('btnHeels');
+const btnUndo = document.getElementById('btnUndo');
+const btnNewGame = document.getElementById('btnNewGame');
+const btnSwapDealer = document.getElementById('btnSwapDealer');
 
-const undo=[];
+const chkMuggins = document.getElementById('chkMuggins');
+const btnMuggins = document.getElementById('btnMuggins');
+const mugginsPts = document.getElementById('mugginsPts');
 
-/* ================== DOM ================== */
-const p1r1=document.getElementById('p1r1'), p1r2=document.getElementById('p1r2');
-const p2r1=document.getElementById('p2r1'), p2r2=document.getElementById('p2r2');
-const dealerLbl=document.getElementById('dealerLbl'), poneLbl=document.getElementById('poneLbl');
-const turnLbl=document.getElementById('turnLbl'), countLbl=document.getElementById('countLbl'), countBig=document.getElementById('countBig');
-const lastLbl=document.getElementById('lastLbl'), starterBadge=document.getElementById('starterBadge');
-const seqEl=document.getElementById('seq'), cardRow=document.getElementById('cardRow');
-const btnCut=document.getElementById('btnCut'), btnHeels=document.getElementById('btnHeels');
-const btnGo=document.getElementById('btnGo'), btnReset=document.getElementById('btnReset');
-const btnUndo=document.getElementById('btnUndo'), btnSwap=document.getElementById('btnSwap');
-const btnNew=document.getElementById('btnNew');
-const lane=document.getElementById('lane');
+const btnStartCount = document.getElementById('btnStartCount');
+const countStage = document.getElementById('countStage');
+const poneHand = document.getElementById('poneHand');
+const dealerHand = document.getElementById('dealerHand');
+const cribPoints = document.getElementById('cribPoints');
+const btnCountPone = document.getElementById('btnCountPone');
+const btnCountDealer = document.getElementById('btnCountDealer');
+const btnCountCrib = document.getElementById('btnCountCrib');
 
-const pegP1F=document.getElementById('pegP1Front'), pegP1B=document.getElementById('pegP1Back');
-const pegP2F=document.getElementById('pegP2Front'), pegP2B=document.getElementById('pegP2Back');
-
-/* ================== Board Build ================== */
-function buildRow(container, from, to){
-  container.innerHTML='';
-  for(let i=from;i<=to;i++){
-    const h=document.createElement('div'); h.className='hole'; h.dataset.idx=i; container.appendChild(h);
+/* ------------------ Init Board ------------------ */
+function buildTrack(container){
+  container.innerHTML = '';
+  // 0..60 on first row (61 holes), then 61..121 on second row (61 holes, but 121 = game hole)
+  // We'll render two rows of 61 to keep simple; index 121 gets a special style
+  const row1 = document.createElement('div'); row1.className='holes';
+  const row2 = document.createElement('div'); row2.className='holes';
+  for(let i=0;i<=60;i++){
+    const h = document.createElement('div'); h.className='hole'; h.dataset.idx=i.toString(); row1.appendChild(h);
   }
+  for(let i=61;i<=121;i++){
+    const h = document.createElement('div'); h.className='hole'; h.dataset.idx=i.toString(); row2.appendChild(h);
+  }
+  container.appendChild(row1);
+  container.appendChild(row2);
 }
+buildTrack(holesP1);
+buildTrack(holesP2);
+
+/* ------------------ Helpers ------------------ */
 function holeEl(player, idx){
-  const topRow = (player===P1) ? p1r1 : p2r1;
-  const botRow = (player===P1) ? p1r2 : p2r2;
-  const row = (idx<=60) ? topRow : botRow;
-  return row.querySelector(`.hole[data-idx="${idx}"]`);
+  const container = (player===P1) ? holesP1 : holesP2;
+  return container.querySelector(`.hole[data-idx="${idx}"]`);
 }
-function centerOf(el){
-  const r = el.getBoundingClientRect();
-  const pr = el.offsetParent.getBoundingClientRect();
-  return { left: (r.left + r.width/2) - pr.left, top: (r.top + r.height/2) - pr.top };
-}
-function placePegSprites(){
-  [ [P1,pegP1F,pegP1B], [P2,pegP2F,pegP2B] ].forEach(([pl, pf, pb])=>{
-    const fC = centerOf(holeEl(pl, pl.front));
-    pf.style.left = fC.left + 'px'; pf.style.top = fC.top + 'px';
-    const bC = centerOf(holeEl(pl, pl.back));
-    pb.style.left = bC.left + 'px'; pb.style.top = bC.top + 'px';
+function drawPegs(){
+  [holesP1, holesP2].forEach(c=>c.querySelectorAll('.peg').forEach(p=>p.remove()));
+  // P1
+  [ ['front', 'p1 front'], ['back', 'p1 back'] ].forEach(([which, cls])=>{
+    const idx = P1[which];
+    const el = holeEl(P1, idx);
+    const peg = document.createElement('div');
+    peg.className = `peg ${cls}`;
+    el.appendChild(peg);
   });
-}
-function redrawAll(){
-  dealerLbl.textContent=dealer.id; poneLbl.textContent=pone.id; turnLbl.textContent=turn.id;
-  countLbl.textContent=running; countBig.textContent=running;
-  seqEl.innerHTML = seq.map(c=>`<span class="badge mono">${c.player.id}:${label(c.rank)}(${c.value})</span>`).join('');
-  starterBadge.textContent = starter ? `${label(starter.rank)}${starter.suit}` : '—';
-  btnHeels.disabled = !(starter && starter.rank===11 && heelsAvailable) || gameOver;
-  btnGo.disabled = gameOver || seq.length===0;
-  btnUndo.disabled = undo.length===0 || gameOver;
-  fillLane();
-  placePegSprites();
-}
-
-/* ================== Counting Lane 0–31 ================== */
-function buildLane(){
-  lane.innerHTML='';
-  for(let i=0;i<=31;i++){
-    const p=document.createElement('div'); p.className='pip'; if(i===15) p.classList.add('mark15');
-    lane.appendChild(p);
-  }
-}
-function fillLane(){
-  const pips = lane.querySelectorAll('.pip');
-  pips.forEach((p,i)=> p.classList.toggle('fill', i>0 && i<=running));
-}
-
-/* ================== Undo Snapshots ================== */
-function snapshot(label=''){
-  undo.push({
-    label, P1:{...P1}, P2:{...P2},
-    leader:leader.id, dealer:dealer.id, pone:pone.id, turn:turn.id,
-    starter: starter?{...starter}:null, heelsAvailable,
-    seq:[...seq], running, go:{...go}, last:lastLbl.textContent, gameOver
+  // P2
+  [ ['front', 'p2 front'], ['back', 'p2 back'] ].forEach(([which, cls])=>{
+    const idx = P2[which];
+    const el = holeEl(P2, idx);
+    const peg = document.createElement('div');
+    peg.className = `peg ${cls}`;
+    el.appendChild(peg);
   });
-  btnUndo.disabled=false;
+
+  scoreP1.textContent = P1.front;
+  scoreP2.textContent = P2.front;
 }
-function restore(s){
-  Object.assign(P1,s.P1); Object.assign(P2,s.P2);
-  leader=(s.leader==='P1')?P1:P2; dealer=(s.dealer==='P1')?P1:P2; pone=(s.pone==='P1')?P1:P2; turn=(s.turn==='P1')?P1:P2;
-  starter=s.starter?{...s.starter}:null; heelsAvailable=s.heelsAvailable;
-  seq=[...s.seq]; running=s.running; go={...s.go}; lastLbl.textContent=s.last; gameOver=s.gameOver;
-  redrawAll();
+function uiSync(){
+  dealerLabel.textContent = (dealer===P1?'P1':'P2');
+  leaderLabel.textContent = (leader===P1?'P1':'P2');
+  turnLabel.textContent = (turn===P1?'P1':'P2');
+  runningCountEl.textContent = running;
+  seqView.innerHTML = sequence.map(c=>{
+    const t = cardLabel(c.rank);
+    return `<span class="badge">${c.player.id}:${t} (${c.value})</span>`;
+  }).join('');
+  btnHeels.disabled = !heelsAvailable || gameOver;
+  btnGo.disabled = gameOver;
+  btnResetSeq.disabled = gameOver;
+  btnUndo.disabled = gameOver || actionStack.length===0;
+  btnMuggins.disabled = !chkMuggins.checked || gameOver;
+  mugginsPts.disabled = !chkMuggins.checked;
 }
-
-/* ================== Peg Motion (animated leapfrog) ================== */
-function animateLeapfrog(player, points, reason=''){
-  if(points<=0) return;
-  snapshot(`peg ${player.id} +${points} ${reason}`);
-  const fromIdx = player.back;
-  const toIdx = Math.min(121, fromIdx + points);
-
-  // Move the BACK sprite to the destination
-  const sprite = (player===P1) ? pegP1B : pegP2B;
-  const targetCenter = centerOf(holeEl(player, toIdx));
-  sprite.style.left = targetCenter.left + 'px';
-  sprite.style.top  = targetCenter.top  + 'px';
-
-  // After the transition, swap roles and finalize
-  sprite.addEventListener('transitionend', onDone, {once:true});
-  function onDone(){
-    player.back = toIdx;
-    // swap front/back roles in model
-    [player.front, player.back] = [player.back, player.front];
-
-    // Ensure both sprites are snapped to their new holes
-    placePegSprites();
-
-    lastLbl.textContent = `${player.id} +${points}${reason?` ${reason}`:''}`;
-    if(player.front>=121){ gameOver=true; lastLbl.textContent = `${player.id} pegs out`; }
+function cardLabel(rank){
+  return ({11:'J',12:'Q',13:'K'}[rank] || (rank===1?'A':rank));
+}
+function valForRank(rank){ return Math.min(rank, 10); }
+function endGameIfNeeded(player){
+  if(player.front>=121){
+    gameOver = true;
+    gameMsg.textContent = `Game over: ${player.id} pegs out at 121`;
+    // lock play
   }
 }
 
-/* ================== Scoring Helpers ================== */
-function scoreRunTail(arr){
-  let best=0;
-  for(let k=arr.length;k>=3;k--){
-    const t=arr.slice(-k).map(x=>x.rank);
-    if(new Set(t).size!==k) continue;
-    const mn=Math.min(...t), mx=Math.max(...t);
-    if(mx-mn+1===k){ best=k; break; }
+/* Leapfrog: only the BACK peg moves forward by points and becomes the new FRONT */
+function leapfrog(player, points, label=''){
+  if(points<=0) return; // zero hand/crib: no movement
+  const prev = { p: player.id, front:player.front, back:player.back, running, sequence:[...sequence], label, lastScore:lastScoreEl.textContent, turn:turn.id, leader:leader.id, go: {...goState} };
+  const target = Math.min(121, player.back + points);
+  player.back = target;
+  [player.front, player.back] = [player.back, player.front]; // swap roles
+  drawPegs();
+  lastScoreEl.textContent = `${player.id} +${points} ${label}`;
+  endGameIfNeeded(player);
+  actionStack.push({type:'peg', snapshot:prev});
+}
+
+/* ------------------ Scoring During Play ------------------ */
+function playCard(rank){
+  if(gameOver) return;
+  // first card kills heels availability
+  if(heelsAvailable) heelsAvailable = false;
+
+  const value = valForRank(rank);
+  if(running + value > 31){
+    alert("That would exceed 31. Call 'Go' if you cannot play.");
+    return;
+  }
+
+  // Register card in current sequence
+  sequence.push({player:turn, rank, value});
+  running += value;
+  goState.lastPlayer = turn;
+
+  // Compute points for this play (can combine: pair/run/15/31; but only one of {go/31/last-card} per play, handled elsewhere)
+  let gained = 0; let reason = [];
+
+  // Pairs / triples / quads: check trailing same ranks
+  let same = 1;
+  for(let i=sequence.length-2; i>=0; i--){
+    if(sequence[i].rank === rank) same++;
+    else break;
+  }
+  if(same===2){ gained += 2; reason.push('Pair +2'); }
+  else if(same===3){ gained += 6; reason.push('Pair Royal +6'); }
+  else if(same===4){ gained += 12; reason.push('Double Pair Royal +12'); }
+
+  // Runs (3+): scan longest run ending at last card within the current sequence
+  const runPts = scoreRun(sequence);
+  if(runPts>0){ gained += runPts; reason.push(`Run of ${runPts} +${runPts}`); }
+
+  // 15 and 31
+  if(running===15){ gained += 2; reason.push('Fifteen +2'); }
+  if(running===31){ gained += 2; reason.push('Thirty-one +2'); }
+
+  if(gained>0){ leapfrog(turn, gained, reason.join(', ')); }
+
+  // If exactly 31, sequence ends and the other player leads next
+  if(running===31){
+    sequence = [];
+    running = 0;
+    // Lead after 31: the non-player (opponent) leads next
+    leader = (turn===P1)?P2:P1;
+    turn = leader;
+    goState = {active:false, caller:null, lastPlayer:null};
+  } else {
+    // normal alternating turn
+    turn = (turn===P1)?P2:P1;
+  }
+
+  uiSync();
+}
+
+function scoreRun(seq){
+  // Consider only current sequence (since last reset)
+  // Find longest k>=3 at end where ranks are a permutation of consecutive ranks
+  let best = 0;
+  for(let k = Math.min(seq.length, 7); k>=3; k--){
+    const slice = seq.slice(-k).map(c=>c.rank);
+    const set = new Set(slice);
+    if(set.size !== k) continue; // no repeats in a run
+    const min = Math.min(...slice), max = Math.max(...slice);
+    if(max - min + 1 === k){ best = k; break; }
   }
   return best;
 }
 
-/* ================== Play Flow ================== */
-function playCard(rank){
+/* ------------------ Go / Last Card / Sequence Reset ------------------ */
+btnGo.addEventListener('click', ()=>{
   if(gameOver) return;
-  const value = val(rank);
-  if(running + value > 31){ alert("That would exceed 31. If you can't play, press Go."); return; }
-
-  snapshot(`play ${turn.id} ${label(rank)}`);
-
-  if(heelsAvailable) heelsAvailable=false; // first card played forfeits heels if not taken
-
-  seq.push({player:turn, rank, value});
-  running += value; go.lastPlayer = turn;
-
-  // pairs / trips / quads
-  let same=1;
-  for(let i=seq.length-2;i>=0;i--){ if(seq[i].rank===rank) same++; else break; }
-  if(same===2) animateLeapfrog(turn,2,'(Pair +2)');
-  else if(same===3) animateLeapfrog(turn,6,'(Pair Royal +6)');
-  else if(same===4) animateLeapfrog(turn,12,'(Double Pair Royal +12)');
-
-  // runs
-  const runPts = scoreRunTail(seq);
-  if(runPts>0) animateLeapfrog(turn, runPts, `(Run ${runPts} +${runPts})`);
-
-  // 15 / 31
-  if(running===15) animateLeapfrog(turn,2,'(Fifteen +2)');
-  if(running===31) animateLeapfrog(turn,2,'(Thirty-one +2)');
-
-  // turn logic
-  if(running===31){
-    seq=[]; running=0; go={active:false,caller:null,lastPlayer:null};
-    leader = (turn===P1)?P2:P1; turn = leader;
-  } else {
-    if(go.active){
-      turn = (go.caller===P1)?P2:P1; // opponent of go-caller may keep playing
-    } else {
-      turn = (turn===P1)?P2:P1;
-    }
+  // If no sequence yet, ignore
+  if(sequence.length===0){
+    alert('No cards in sequence yet.');
+    return;
   }
-  redrawAll();
-}
-
-/* ================== Controls ================== */
-btnCut.onclick = ()=>{
-  if(gameOver) return;
-  snapshot('cut');
-  const suits=['♣','♦','♥','♠']; const r=1+Math.floor(Math.random()*13); const s=suits[Math.floor(Math.random()*4)];
-  starter = {rank:r, suit:s};
-  heelsAvailable = (r===11);
-  redrawAll();
-};
-btnHeels.onclick = ()=>{
-  if(!(starter && starter.rank===11 && heelsAvailable) || gameOver) return;
-  animateLeapfrog(dealer,2,'(His Heels +2)'); heelsAvailable=false; redrawAll();
-};
-btnGo.onclick = ()=>{
-  if(gameOver || seq.length===0) return;
-  snapshot('go');
-  if(go.active){
-    if(running!==31 && go.lastPlayer) animateLeapfrog(go.lastPlayer,1,'(Last card +1)');
-    seq=[]; running=0; leader = go.caller; turn = leader; go={active:false,caller:null,lastPlayer:null};
-  }else{
-    go={active:true, caller:turn, lastPlayer:go.lastPlayer};
+  if(goState.active && goState.caller && goState.caller!==turn){
+    // Two consecutive GOs => award "last card +1" to the player who last played (unless last play was 31, which would have reset)
+    if(running !== 31){
+      const last = goState.lastPlayer;
+      leapfrog(last, 1, 'Last card +1');
+    }
+    // Reset sequence
+    sequence = [];
+    running = 0;
+    // After a GO, the initial GO-caller leads next
+    leader = goState.caller;
+    turn = leader;
+    goState = {active:false, caller:null, lastPlayer:null};
+  } else {
+    // First GO declaration: player unable to play
+    goState.active = true;
+    goState.caller = turn;
+    // Turn passes to opponent (who may play one or more until 31 or cannot)
     turn = (turn===P1)?P2:P1;
   }
-  redrawAll();
-};
-btnReset.onclick = ()=>{
+  uiSync();
+});
+
+btnResetSeq.addEventListener('click', ()=>{
   if(gameOver) return;
-  snapshot('reset');
-  seq=[]; running=0; turn=leader; go={active:false,caller:null,lastPlayer:null};
-  redrawAll();
-};
-btnUndo.onclick = ()=>{
-  if(undo.length===0 || gameOver) return;
-  const s=undo.pop(); restore(s);
-};
-btnSwap.onclick = ()=>{
-  snapshot('swap dealer');
-  [dealer,pone] = (dealer===P1)?[P2,P1]:[P1,P2];
-  leader=pone; turn=leader; redrawAll();
-};
-btnNew.onclick = ()=>{
-  undo.length=0; Object.assign(P1,{front:0,back:0}); Object.assign(P2,{front:0,back:0});
-  starter=null; heelsAvailable=false; seq=[]; running=0; go={active:false,caller:null,lastPlayer:null};
-  dealer=P2; pone=P1; leader=pone; turn=leader; gameOver=false; lastLbl.textContent='—';
-  redrawAll();
-};
+  // Manual reset of sequence (use sparingly; primarily for training)
+  if(running !== 31 && sequence.length>0 && goState.lastPlayer){
+    // If they manually reset a live sequence, honor the implied "last card" award
+    const last = goState.lastPlayer;
+    leapfrog(last, 1, 'Last card +1 (manual reset)');
+  }
+  sequence = [];
+  running = 0;
+  leader = goState.caller || leader;
+  turn = leader;
+  goState = {active:false, caller:null, lastPlayer:null};
+  uiSync();
+});
 
-/* ================== Card Bar (A..K) ================== */
-(function buildCardRow(){
-  const ranks=[1,2,3,4,5,6,7,8,9,10,11,12,13];
-  ranks.forEach(r=>{
-    const b=document.createElement('button'); b.className='chipbtn'; b.textContent=label(r); b.onclick=()=>playCard(r);
-    cardRow.appendChild(b);
+/* ------------------ Heels (+2 to dealer before any card is played) ------------------ */
+btnHeels.addEventListener('click', ()=>{
+  if(gameOver) return;
+  if(!heelsAvailable){
+    alert('Heels must be taken before the first card is played.');
+    return;
+  }
+  leapfrog(dealer, 2, 'His Heels +2');
+  heelsAvailable = false;
+  uiSync();
+});
+
+/* ------------------ Card Buttons ------------------ */
+document.querySelectorAll('.cardbtn').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    const rank = Number(btn.dataset.rank);
+    playCard(rank);
   });
-})();
+});
 
-/* ================== Boot & Layout ================== */
-function buildBoard(){
-  buildRow(p1r1,0,60); buildRow(p1r2,61,121);
-  buildRow(p2r1,0,60); buildRow(p2r2,61,121);
+/* ------------------ Undo (self-correction before next action) ------------------ */
+btnUndo.addEventListener('click', ()=>{
+  if(actionStack.length===0 || gameOver) return;
+  const action = actionStack.pop();
+  if(action.type==='peg'){
+    const s = action.snapshot;
+    const player = (s.p==='P1')?P1:P2;
+    player.front = s.front; player.back = s.back;
+    running = s.running;
+    sequence = s.sequence;
+    lastScoreEl.textContent = s.lastScore;
+    turn = (s.turn==='P1')?P1:P2;
+    leader = (s.leader==='P1')?P1:P2;
+    goState = s.go;
+    gameOver = false;
+    gameMsg.textContent = '—';
+    drawPegs(); uiSync();
+  }
+});
+
+/* ------------------ Counting Phase (Pone → Dealer → Crib) ------------------ */
+let counting = false, countingStep = 0; // 0: not started, 1: pone, 2: dealer, 3: crib
+btnStartCount.addEventListener('click', ()=>{
+  if(gameOver){ alert('Game finished. Start a new game.'); return; }
+  counting = true; countingStep = 1;
+  countStage.textContent = 'Pone Hand';
+  btnCountPone.disabled = false;
+  btnCountDealer.disabled = true;
+  btnCountCrib.disabled = true;
+});
+
+btnCountPone.addEventListener('click', ()=>{
+  if(!counting || countingStep!==1) return;
+  const pts = Number(poneHand.value||0);
+  if(pts>0) leapfrog(pone, pts, 'Pone hand');
+  countingStep = 2; countStage.textContent = 'Dealer Hand';
+  btnCountPone.disabled = true; btnCountDealer.disabled = false;
+  uiSync();
+});
+btnCountDealer.addEventListener('click', ()=>{
+  if(!counting || countingStep!==2) return;
+  const pts = Number(dealerHand.value||0);
+  if(pts>0) leapfrog(dealer, pts, 'Dealer hand');
+  countingStep = 3; countStage.textContent = 'Crib (Dealer)';
+  btnCountDealer.disabled = true; btnCountCrib.disabled = false;
+  uiSync();
+});
+btnCountCrib.addEventListener('click', ()=>{
+  if(!counting || countingStep!==3) return;
+  const pts = Number(cribPoints.value||0);
+  if(pts>0) leapfrog(dealer, pts, 'Crib');
+  counting = false; countingStep = 0;
+  countStage.textContent = 'Done';
+  btnCountCrib.disabled = true;
+  uiSync();
+});
+
+/* ------------------ Muggins (manual award) ------------------ */
+chkMuggins.addEventListener('change', ()=>{
+  btnMuggins.disabled = !chkMuggins.checked;
+  mugginsPts.disabled = !chkMuggins.checked;
+});
+btnMuggins.addEventListener('click', ()=>{
+  if(!chkMuggins.checked || gameOver) return;
+  const pts = Math.max(1, Number(mugginsPts.value||0));
+  // Award to the non-current player (simulating opponent calling muggins)
+  const beneficiary = (turn===P1)?P2:P1;
+  leapfrog(beneficiary, pts, 'Muggins (manual)');
+  uiSync();
+});
+
+/* ------------------ Game / Dealer Controls ------------------ */
+btnNewGame.addEventListener('click', ()=>{
+  resetGame(false);
+});
+btnSwapDealer.addEventListener('click', ()=>{
+  // swap dealer → pone
+  [dealer, pone] = (dealer===P1) ? [P2, P1] : [P1, P2];
+  leader = pone; turn = leader;
+  heelsAvailable = true;
+  uiSync();
+});
+
+/* ------------------ Reset ------------------ */
+function resetGame(full=true){
+  [P1, P2].forEach(p=>{ p.front=0; p.back=0; p.lastMove=0; });
+  drawPegs();
+  sequence = []; running = 0;
+  heelsAvailable = true;
+  goState = {active:false, caller:null, lastPlayer:null};
+  gameOver = false;
+  gameMsg.textContent = '—';
+  leader = pone; turn = leader;
+  actionStack.length = 0;
+  if(full){
+    dealer = P2; pone = P1; leader = pone; turn = leader;
+  }
+  uiSync();
 }
-buildBoard();
-buildLane();
-window.addEventListener('resize', placePegSprites);
-placePegSprites();
-redrawAll();
+
+/* ------------------ Boot ------------------ */
+drawPegs();
+uiSync();
 </script>
 </body>
 </html>
+
