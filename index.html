@@ -1,0 +1,1123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Peg by Peg Cribbage – Teaching Suite</title>
+  <link href="https://fonts.googleapis.com/css2?family=Merriweather:wght@400;700&family=Lora:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --wood-bg: #e0d0b0;
+      --ink: #3e2723;
+      --board-brown: #8B4513;
+      --border-brown: #5d4037;
+      --parchment: #fdf5e6;
+      --accent-red: #CC3333;
+      --accent-blue: #3366CC;
+    }
+
+    body {
+      font-family: 'Lora', serif;
+      background: var(--wood-bg) url('https://www.transparenttextures.com/patterns/wood-pattern.png');
+      color: var(--ink);
+      padding: 16px;
+      margin: 0;
+      text-align: center;
+      line-height: 1.6;
+    }
+
+    h1, h2, h3 {
+      font-family: 'Merriweather', serif;
+      color: var(--border-brown);
+      text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
+      margin: 6px 0;
+    }
+
+    h1 { font-size: 2.1em; }
+    h2 { font-size: 1.5em; }
+    h3 { font-size: 1.2em; }
+
+    p { margin: 6px 0 10px; }
+
+    /* Top nav */
+    #nav {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 6px;
+      margin-bottom: 12px;
+    }
+
+    .nav-btn {
+      padding: 8px 14px;
+      border-radius: 8px;
+      border: 1px solid #bfa58a;
+      background: #6D4C41;
+      color: #fff;
+      font-family: 'Merriweather', serif;
+      font-size: 0.9em;
+      cursor: pointer;
+      box-shadow: 1px 1px 4px rgba(0,0,0,0.25);
+      transition: all 0.18s ease;
+    }
+
+    .nav-btn:hover {
+      background: #5D4037;
+      transform: translateY(-1px);
+      box-shadow: 2px 2px 6px rgba(0,0,0,0.3);
+    }
+
+    .nav-btn.active {
+      background: #4E342E;
+      box-shadow: inset 0 0 4px rgba(0,0,0,0.4);
+    }
+
+    /* Shared board styling */
+    .board-container {
+      margin: 18px auto;
+      width: 650px;
+      max-width: 95%;
+      padding: 16px;
+      background: var(--board-brown);
+      border: 8px solid var(--border-brown);
+      border-radius: 14px;
+      box-shadow: 4px 4px 14px rgba(0,0,0,0.45),
+                  inset 0 0 10px rgba(0,0,0,0.35);
+    }
+
+    .track {
+      position: relative;
+      height: 50px;
+      margin-bottom: 20px;
+      border: 2px solid var(--border-brown);
+      background: #D2B48C;
+      border-radius: 8px;
+      box-shadow: inset 0 0 5px rgba(0,0,0,0.2);
+      padding: 0 10px;
+      box-sizing: border-box;
+    }
+
+    .track-label {
+      position: absolute;
+      top: -21px;
+      left: 0;
+      font-weight: bold;
+      color: var(--border-brown);
+      font-size: 0.8em;
+      text-transform: uppercase;
+    }
+
+    .holes {
+      position: absolute;
+      top: 24px;
+      left: 10px;
+      width: calc(100% - 20px);
+      display: flex;
+      justify-content: space-between;
+      pointer-events: none;
+    }
+
+    .hole {
+      width: 5px;
+      height: 5px;
+      background: #4A301E;
+      border-radius: 50%;
+      flex-shrink: 0;
+      box-shadow: inset 0 1px 2px rgba(0,0,0,0.3);
+    }
+
+    .peg {
+      position: absolute;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      top: 13px;
+      border: 2px solid #fdfdfd;
+      box-shadow: 0 3px 6px rgba(0,0,0,0.3),
+                  inset 0 0 5px rgba(255,255,255,0.5);
+      transition: left 0.3s ease-out;
+    }
+
+    .peg.back { opacity: 0.6; }
+
+    .peg.pegging {
+      animation: hop 0.35s ease-out;
+    }
+
+    @keyframes hop {
+      0% { transform: translateY(0); }
+      50% { transform: translateY(-26px); }
+      100% { transform: translateY(0); }
+    }
+
+    .peg.p1 { background: var(--accent-red); }
+    .peg.p2 { background: var(--accent-blue); }
+
+    .section {
+      display: none;
+      max-width: 1000px;
+      margin: 0 auto;
+    }
+
+    .section.active {
+      display: block;
+    }
+
+    .explain {
+      font-size: 0.85em;
+      color: #5d4037;
+      max-width: 800px;
+      margin: 2px auto 10px;
+    }
+
+    button {
+      padding: 8px 14px;
+      margin: 4px;
+      background: #6D4C41;
+      color: #fff;
+      border: none;
+      cursor: pointer;
+      border-radius: 7px;
+      font-size: 0.86em;
+      font-family: 'Merriweather', serif;
+      transition: all 0.15s ease;
+      box-shadow: 1px 1px 4px rgba(0,0,0,0.24);
+    }
+
+    button:hover {
+      background: #5D4037;
+      transform: translateY(-1px);
+      box-shadow: 2px 2px 6px rgba(0,0,0,0.3);
+    }
+
+    button:active {
+      background: #4E342E;
+      transform: translateY(0);
+      box-shadow: 1px 1px 3px rgba(0,0,0,0.2);
+    }
+
+    .secondary {
+      background: #a1887f;
+    }
+    .secondary:hover {
+      background: #8d6e63;
+    }
+
+    .scores {
+      font-weight: bold;
+      font-size: 1.05em;
+      color: var(--border-brown);
+      margin: 6px 0 4px;
+    }
+
+    .log {
+      background: rgba(253,245,230,0.98);
+      border-radius: 8px;
+      padding: 6px 8px;
+      border: 1px solid #d3c6af;
+      max-height: 120px;
+      overflow-y: auto;
+      font-size: 0.75em;
+      text-align: left;
+      margin: 6px auto 10px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.12);
+    }
+
+    .log-row {
+      padding: 2px 0;
+      border-bottom: 1px dotted #e0d3c0;
+    }
+    .log-row:last-child { border-bottom: none; }
+    .log-p1 { color: var(--accent-red); }
+    .log-p2 { color: var(--accent-blue); }
+
+    .mini {
+      margin: 12px auto;
+      padding: 12px;
+      background: var(--parchment);
+      border-radius: 10px;
+      border: 1px solid #d3c6af;
+      box-shadow: 0 3px 8px rgba(0,0,0,0.18);
+      max-width: 480px;
+      font-size: 0.85em;
+      text-align: left;
+    }
+
+    .mini h3 {
+      margin-top: 0;
+      text-align: center;
+    }
+
+    .mini label {
+      font-size: 0.8em;
+      display: block;
+      margin: 4px 0 2px;
+    }
+
+    input[type="text"], input[type="number"] {
+      padding: 5px 8px;
+      border-radius: 5px;
+      border: 1px solid #b8aaa0;
+      font-family: 'Lora', serif;
+      font-size: 0.85em;
+      margin: 2px;
+    }
+
+    .cards-row {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 4px;
+      margin-top: 4px;
+    }
+
+    .card-pill {
+      padding: 4px 7px;
+      border-radius: 6px;
+      border: 1px solid #b8aaa0;
+      background: #fff;
+      font-size: 0.82em;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .card-pill.selected {
+      background: #6D4C41;
+      color: #fff;
+      border-color: #4E342E;
+    }
+
+    @media (max-width: 600px) {
+      h1 { font-size: 1.6em; }
+      .board-container { padding: 12px; }
+      .track { height: 46px; }
+      .peg { width: 20px; height: 20px; top: 13px; }
+    }
+  </style>
+</head>
+<body>
+  <h1>Peg by Peg Cribbage – Teaching Suite</h1>
+  <p class="explain">
+    One rules engine, many faces: an official 121 board, trainer boards, and mini-games that follow your 6-level progression.
+  </p>
+
+  <div id="nav">
+    <button class="nav-btn active" onclick="showView('levels')">Levels Overview</button>
+    <button class="nav-btn" onclick="showView('trainer')">Trainer Board (Lv 1–3)</button>
+    <button class="nav-btn" onclick="showView('hand')">Hand Scoring Trainer (Lv 4)</button>
+    <button class="nav-btn" onclick="showView('discard')">Discard & Crib Trainer (Lv 5)</button>
+    <button class="nav-btn" onclick="showView('official')">Official 121 Board (Lv 6)</button>
+  </div>
+
+  <!-- LEVELS OVERVIEW -->
+  <div id="view-levels" class="section active">
+    <h2>6-Level Cribbage Teaching Path</h2>
+    <p class="explain">
+      This page is the map. Use the Trainer Board and mini-games to teach each level, then graduate students to the Official 121 Board.
+    </p>
+    <div class="mini">
+      <h3>Level 1 – Peg to 31</h3>
+      <p>Learn the running count, staying at or under 31, last card & 31 scoring. Play to 20.</p>
+    </div>
+    <div class="mini">
+      <h3>Level 2 – Pattern Scoring</h3>
+      <p>Add 15s, pairs, and runs during pegging. Manual buttons on the Trainer Board. Play to 40.</p>
+    </div>
+    <div class="mini">
+      <h3>Level 3 – Full Pegging</h3>
+      <p>Introduce "Go", segment resets, and full pegging scoring. Play to 60.</p>
+    </div>
+    <div class="mini">
+      <h3>Level 4 – Counting Hands (Show)</h3>
+      <p>Use the Hand Scoring Trainer to practice fifteens, pairs, runs, flushes, and nobs. Play to 80.</p>
+    </div>
+    <div class="mini">
+      <h3>Level 5 – Strategic Discarding</h3>
+      <p>Use the Discard Trainer to compare hand vs crib potential. Play to 100.</p>
+    </div>
+    <div class="mini">
+      <h3>Level 6 – Full Cribbage</h3>
+      <p>Run full games on the Official 121 Board: deal, discard to crib, pegging, show, crib count, 121 to win.</p>
+    </div>
+    <p class="explain">
+      Everything your printed cards say can live here visually. Each tool below is aligned to one or more levels.
+    </p>
+  </div>
+
+  <!-- TRAINER BOARD: LEVELS 1–3 -->
+  <div id="view-trainer" class="section">
+    <h2>Trainer Board – Pegging & Pattern Practice (Levels 1–3)</h2>
+    <p class="explain">
+      Two lanes, same race. Use track length + buttons according to the level you're teaching.
+      This is a <strong>trainer</strong>, not the official scoreboard.
+    </p>
+
+    <div class="mini" style="text-align:center;">
+      <label for="trainer-track">Track Length / Level:</label>
+      <select id="trainer-track">
+        <option value="20">Level 1 – Race to 20 (Peg to 31)</option>
+        <option value="40">Level 2 – Race to 40 (Add 15s / pairs / runs)</option>
+        <option value="60">Level 3 – Race to 60 (Full pegging with "Go")</option>
+        <option value="121">Full View – 121 (Training only)</option>
+      </select>
+      <button onclick="trainerInit()">Start / Change</button>
+      <button class="secondary" onclick="trainerReset()">New Game (same track)</button>
+      <p class="explain">
+        Suggested use: L1 use only +1/+2 & 31-trainer. L2 add pattern buttons. L3 add "Go" behavior & full rules.
+      </p>
+    </div>
+
+    <div class="board-container" id="trainer-board" style="display:none;">
+      <!-- P1 track -->
+      <div class="track" id="trainer-track-p1">
+        <div class="track-label" id="trainer-label-p1"></div>
+        <div class="holes" id="trainer-holes-p1"></div>
+        <div class="peg p1" id="trainer-p1-front"></div>
+        <div class="peg p1 back" id="trainer-p1-back"></div>
+      </div>
+      <!-- P2 track -->
+      <div class="track" id="trainer-track-p2">
+        <div class="track-label" id="trainer-label-p2"></div>
+        <div class="holes" id="trainer-holes-p2"></div>
+        <div class="peg p2" id="trainer-p2-front"></div>
+        <div class="peg p2 back" id="trainer-p2-back"></div>
+      </div>
+    </div>
+
+    <div class="scores" id="trainer-scores">Player 1: 0 | Player 2: 0</div>
+
+    <div>
+      <button onclick="trainerMove(1,1,'+1')">P1 +1</button>
+      <button onclick="trainerMove(1,2,'+2 / 15 / pair')">P1 +2</button>
+      <button onclick="trainerMove(1,-1,'Correction -1')">P1 -1</button>
+      <button onclick="trainerMove(1,3,'Run/Combo +3')">P1 +3</button>
+      <br>
+      <button onclick="trainerMove(2,1,'+1')">P2 +1</button>
+      <button onclick="trainerMove(2,2,'+2 / 15 / pair')">P2 +2</button>
+      <button onclick="trainerMove(2,-1,'Correction -1')">P2 -1</button>
+      <button onclick="trainerMove(2,3,'Run/Combo +3')">P2 +3</button>
+    </div>
+
+    <div class="mini" style="text-align:center;">
+      <h3>Pegging Count Trainer (31)</h3>
+      <p>Use with Level 1–3 to reinforce the 31 rule.</p>
+      <input type="number" id="peg-count" placeholder="Current total" min="0" max="31" />
+      <button onclick="checkPegCount()">Check</button>
+      <div id="peg-count-result" style="margin-top:4px;font-weight:bold;"></div>
+    </div>
+  </div>
+
+  <!-- HAND SCORING TRAINER: LEVEL 4 -->
+  <div id="view-hand" class="section">
+    <h2>Hand Scoring Trainer (Level 4)</h2>
+    <p class="explain">
+      Enter 4 hand cards and a starter to see correct cribbage scoring:
+      Fifteens, pairs, runs, flush, nobs. Uses real scoring logic.
+    </p>
+
+    <div class="mini">
+      <label>Hand (4 cards): e.g. <code>5H 5D 6C 7S</code></label>
+      <input type="text" id="ht-hand" placeholder="e.g. 5H 5D 6C 7S" style="width:90%;" />
+
+      <label>Starter (1 card): e.g. <code>8C</code></label>
+      <input type="text" id="ht-starter" placeholder="e.g. 8C" />
+
+      <button onclick="scoreHandTrainer()">Score Hand</button>
+      <button class="secondary" onclick="htExample()">Load Example</button>
+
+      <div id="ht-output" style="margin-top:6px;font-size:0.85em;"></div>
+    </div>
+  </div>
+
+  <!-- DISCARD & CRIB TRAINER: LEVEL 5 -->
+  <div id="view-discard" class="section">
+    <h2>Discard & Crib Trainer (Level 5)</h2>
+    <p class="explain">
+      Deal 6 cards, choose 4 to keep and 2 to discard. See how your decision affects hand vs crib.
+      Great for teaching "your crib" vs "their crib".
+    </p>
+
+    <div class="mini" id="dt-panel">
+      <div style="text-align:center;">
+        <button onclick="dtDeal()">Deal 6 Cards</button>
+        <label style="margin-left:6px;font-size:0.8em;">
+          <input type="checkbox" id="dt-my-crib" /> My crib (good crib is good)
+        </label>
+      </div>
+      <div id="dt-cards" class="cards-row"></div>
+      <div style="text-align:center;margin-top:4px;font-size:0.8em;">
+        Click 4 cards to KEEP (hand). Remaining 2 become crib discards.
+      </div>
+      <div style="text-align:center;margin-top:6px;">
+        <button onclick="dtAnalyze()">Analyze Choice</button>
+      </div>
+      <div id="dt-output" style="margin-top:6px;font-size:0.8em;"></div>
+    </div>
+  </div>
+
+  <!-- OFFICIAL 121 BOARD: LEVEL 6 -->
+  <div id="view-official" class="section">
+    <h2>Official 121 Board (Level 6)</h2>
+    <p class="explain">
+      ACC-style 121 race. Use this as the authoritative board for full games.
+      Scores are entered with reason and fully logged.
+    </p>
+
+    <div class="board-container">
+      <div class="track" id="off-track">
+        <div class="track-label" id="off-label">121-Point Game Board</div>
+        <div class="holes" id="off-holes"></div>
+        <div class="peg p1" id="off-p1-front"></div>
+        <div class="peg p1 back" id="off-p1-back"></div>
+        <div class="peg p2" id="off-p2-front"></div>
+        <div class="peg p2 back" id="off-p2-back"></div>
+      </div>
+    </div>
+
+    <div class="scores" id="off-scores">Player 1: 0 | Player 2: 0</div>
+
+    <div class="mini" style="text-align:center;">
+      <h3>Record Score Event</h3>
+      <label>
+        Player:
+        <select id="off-player">
+          <option value="1">Player 1</option>
+          <option value="2">Player 2</option>
+        </select>
+      </label>
+      <label>
+        Points:
+        <input type="number" id="off-points" style="width:60px;" />
+      </label>
+      <label>
+        Reason:
+        <input type="text" id="off-reason" placeholder="e.g. Hand 12, Crib 6" style="width:160px;" />
+      </label>
+      <div style="margin-top:4px;">
+        <button onclick="offApply()">Apply</button>
+        <button class="secondary" onclick="offReset()">Reset Game</button>
+      </div>
+      <p class="explain">
+        In production, this is where you’d hook your real scoring engine instead of manual points.
+      </p>
+    </div>
+
+    <div class="log" id="off-log"></div>
+  </div>
+
+  <!-- Winner Modal (shared for trainer/official if desired) -->
+  <div id="modal" class="modal" style="display:none;">
+    <div class="modal-content">
+      <span class="close-modal" onclick="hideModal()">&times;</span>
+      <h2 id="modal-message"></h2>
+      <button onclick="hideModal()">OK</button>
+    </div>
+  </div>
+
+  <script>
+    /***************
+     * NAV / VIEWS *
+     ***************/
+    function showView(name) {
+      const sections = {
+        levels: document.getElementById('view-levels'),
+        trainer: document.getElementById('view-trainer'),
+        hand: document.getElementById('view-hand'),
+        discard: document.getElementById('view-discard'),
+        official: document.getElementById('view-official')
+      };
+      for (const key in sections) {
+        sections[key].classList.toggle('active', key === name);
+      }
+      document.querySelectorAll('#nav .nav-btn').forEach(btn => {
+        btn.classList.remove('active');
+      });
+      const map = {
+        levels: 0,
+        trainer: 1,
+        hand: 2,
+        discard: 3,
+        official: 4
+      };
+      const idx = map[name];
+      if (idx != null) {
+        document.querySelectorAll('#nav .nav-btn')[idx].classList.add('active');
+      }
+      if (name === 'official' && !offInitialized) {
+        offInit();
+      }
+    }
+
+    /***********************
+     * CARD / SCORING CORE *
+     ***********************/
+    const RANK_VALUES_15 = {
+      'A':1,'2':2,'3':3,'4':4,'5':5,'6':6,
+      '7':7,'8':8,'9':9,'10':10,'J':10,'Q':10,'K':10
+    };
+    const RANK_ORDER = {
+      'A':1,'2':2,'3':3,'4':4,'5':5,'6':6,
+      '7':7,'8':8,'9':9,'10':10,'J':11,'Q':12,'K':13
+    };
+    const SUITS = ['C','D','H','S'];
+    const RANKS = ['A','2','3','4','5','6','7','8','9','10','J','Q','K'];
+
+    function parseCard(code) {
+      if (!code) return null;
+      code = code.trim().toUpperCase();
+      if (!code) return null;
+      // allow e.g. "5H", "10C"
+      let suit = code.slice(-1);
+      let rank = code.slice(0, -1);
+      if (!SUITS.includes(suit)) return null;
+      if (!RANKS.includes(rank)) return null;
+      return { rank, suit };
+    }
+
+    function scoreCribHand(cards, starter, isCrib) {
+      // cards: 4, starter: 1
+      const all = cards.concat([starter]);
+      let total = 0;
+      const breakdown = [];
+
+      // Fifteens
+      function v(c) { return RANK_VALUES_15[c.rank]; }
+      let fifteenScore = 0;
+      for (let r = 2; r <= 5; r++) {
+        const idx = Array.from({length: all.length}, (_,i)=>i);
+        function comb(start, depth, acc) {
+          if (depth === 0) {
+            const sum = acc.reduce((s, i) => s + v(all[i]), 0);
+            if (sum === 15) fifteenScore += 2;
+            return;
+          }
+          for (let j = start; j <= idx.length - depth; j++) {
+            comb(j+1, depth-1, acc.concat(j));
+          }
+        }
+        comb(0, r, []);
+      }
+      if (fifteenScore) {
+        total += fifteenScore;
+        breakdown.push(`Fifteens: ${fifteenScore}`);
+      }
+
+      // Pairs
+      const rankCounts = {};
+      for (const c of all) {
+        rankCounts[c.rank] = (rankCounts[c.rank] || 0) + 1;
+      }
+      let pairScore = 0;
+      for (const r in rankCounts) {
+        const n = rankCounts[r];
+        if (n >= 2) {
+          pairScore += (n * (n - 1) / 2) * 2;
+        }
+      }
+      if (pairScore) {
+        total += pairScore;
+        breakdown.push(`Pairs: ${pairScore}`);
+      }
+
+      // Runs (standard multiplicative method)
+      const roCounts = {};
+      for (const c of all) {
+        const ro = RANK_ORDER[c.rank];
+        roCounts[ro] = (roCounts[ro] || 0) + 1;
+      }
+      let runScore = 0;
+      let maxLen = 0;
+      for (let start = 1; start <= 11; start++) {
+        let len = 0;
+        let mult = 1;
+        let r = start;
+        while (roCounts[r] && roCounts[r] > 0) {
+          len++;
+          mult *= roCounts[r];
+          r++;
+        }
+        if (len >= 3) {
+          if (len > maxLen) {
+            maxLen = len;
+            runScore = len * mult;
+          } else if (len === maxLen) {
+            runScore += len * mult;
+          }
+        }
+      }
+      if (runScore) {
+        total += runScore;
+        breakdown.push(`Runs: ${runScore}`);
+      }
+
+      // Flush
+      let flushScore = 0;
+      const handSuits = {};
+      cards.forEach(c => handSuits[c.suit] = (handSuits[c.suit] || 0) + 1);
+      if (isCrib) {
+        // crib flush only if all 5 same suit
+        const allSuits = {};
+        all.forEach(c => allSuits[c.suit] = (allSuits[c.suit] || 0) + 1);
+        if (Object.keys(allSuits).length === 1) flushScore = 5;
+      } else {
+        for (const s in handSuits) {
+          if (handSuits[s] === 4) {
+            flushScore = 4;
+            if (starter.suit === s) flushScore = 5;
+          }
+        }
+      }
+      if (flushScore) {
+        total += flushScore;
+        breakdown.push(`Flush: ${flushScore}`);
+      }
+
+      // Nobs
+      let nobs = 0;
+      for (const c of cards) {
+        if (c.rank === 'J' && c.suit === starter.suit) {
+          nobs = 1;
+          break;
+        }
+      }
+      if (nobs) {
+        total += 1;
+        breakdown.push('Nobs: 1');
+      }
+
+      return { total, breakdown };
+    }
+
+    function cardLabel(c) {
+      const sym = {C:'♣',D:'♦',H:'♥',S:'♠'}[c.suit] || c.suit;
+      return c.rank + sym;
+    }
+
+    function makeDeck() {
+      const deck = [];
+      for (const r of RANKS) {
+        for (const s of SUITS) {
+          deck.push({rank:r, suit:s});
+        }
+      }
+      return deck;
+    }
+
+    function drawRandom(deck, n) {
+      const out = [];
+      for (let i=0;i<n;i++) {
+        const idx = Math.floor(Math.random()*deck.length);
+        out.push(deck.splice(idx,1)[0]);
+      }
+      return out;
+    }
+
+    /*********************
+     * TRAINER BOARD L1-3
+     *********************/
+    const TRAINER_OFFSET = 10;
+    const TRAINER_PEG_HALF = 12;
+    let trainerState = {
+      maxPoints: 20,
+      players: {
+        1: { score:0, prev:0 },
+        2: { score:0, prev:0 }
+      }
+    };
+
+    function trainerInit() {
+      const sel = document.getElementById('trainer-track');
+      const val = parseInt(sel.value,10) || 20;
+      trainerState.maxPoints = val;
+      trainerState.players[1].score = 0;
+      trainerState.players[1].prev = 0;
+      trainerState.players[2].score = 0;
+      trainerState.players[2].prev = 0;
+
+      const board = document.getElementById('trainer-board');
+      board.style.display = 'block';
+
+      const label = `Trainer Track: 0–${val} points`;
+      document.getElementById('trainer-label-p1').textContent = label;
+      document.getElementById('trainer-label-p2').textContent = label;
+
+      buildHoles('trainer-holes-p1', val);
+      buildHoles('trainer-holes-p2', val);
+
+      trainerResetPegs();
+      trainerUpdateScores();
+      trainerRecalc();
+    }
+
+    function buildHoles(id, maxPoints) {
+      const div = document.getElementById(id);
+      if (!div) return;
+      div.innerHTML = '';
+      for (let i=0;i<=maxPoints;i++) {
+        const h = document.createElement('div');
+        h.className = 'hole';
+        div.appendChild(h);
+      }
+    }
+
+    function trainerResetPegs() {
+      const p1f = document.getElementById('trainer-p1-front');
+      const p1b = document.getElementById('trainer-p1-back');
+      const p2f = document.getElementById('trainer-p2-front');
+      const p2b = document.getElementById('trainer-p2-back');
+      if (p1f) { p1f.style.left = (TRAINER_OFFSET-TRAINER_PEG_HALF)+'px'; p1f.classList.remove('back','pegging'); p1f.classList.add('p1'); }
+      if (p1b) { p1b.style.left = (TRAINER_OFFSET-TRAINER_PEG_HALF)+'px'; p1b.classList.add('back','p1'); p1b.classList.remove('pegging'); }
+      if (p2f) { p2f.style.left = (TRAINER_OFFSET-TRAINER_PEG_HALF)+'px'; p2f.classList.remove('back','pegging'); p2f.classList.add('p2'); }
+      if (p2b) { p2b.style.left = (TRAINER_OFFSET-TRAINER_PEG_HALF)+'px'; p2b.classList.add('back','p2'); p2b.classList.remove('pegging'); }
+    }
+
+    function trainerRecalc() {
+      const track = document.getElementById('trainer-track-p1');
+      if (!track || document.getElementById('trainer-board').style.display === 'none') return;
+      const innerWidth = track.clientWidth - (TRAINER_OFFSET*2);
+      if (innerWidth <= 0 || trainerState.maxPoints <= 0) return;
+      const spacing = innerWidth / trainerState.maxPoints;
+
+      [1,2].forEach(p => {
+        const st = trainerState.players[p];
+        const front = document.getElementById(`trainer-p${p}-front`);
+        const back = document.getElementById(`trainer-p${p}-back`);
+        if (!front || !back) return;
+        front.style.left = (TRAINER_OFFSET + st.score * spacing - TRAINER_PEG_HALF) + 'px';
+        back.style.left  = (TRAINER_OFFSET + st.prev * spacing  - TRAINER_PEG_HALF) + 'px';
+      });
+    }
+
+    function trainerUpdateScores() {
+      const s1 = trainerState.players[1].score;
+      const s2 = trainerState.players[2].score;
+      document.getElementById('trainer-scores').textContent =
+        `Player 1: ${s1} | Player 2: ${s2}`;
+    }
+
+    function trainerMove(player, delta, label) {
+      if (document.getElementById('trainer-board').style.display === 'none') return;
+      const st = trainerState.players[player];
+      if (!st) return;
+
+      const old = st.score;
+      let ns = old + delta;
+      if (ns < 0) ns = 0;
+      if (ns > trainerState.maxPoints) ns = trainerState.maxPoints;
+
+      st.prev = old;
+      st.score = ns;
+
+      const track = document.getElementById('trainer-track-p1');
+      const innerWidth = track.clientWidth - (TRAINER_OFFSET*2);
+      const spacing = innerWidth / trainerState.maxPoints;
+
+      const front = document.getElementById(`trainer-p${player}-front`);
+      const back  = document.getElementById(`trainer-p${player}-back`);
+      if (!front || !back) return;
+
+      front.classList.add('pegging');
+      back.classList.add('pegging');
+
+      front.style.left = (TRAINER_OFFSET + st.score * spacing - TRAINER_PEG_HALF) + 'px';
+      back.style.left  = (TRAINER_OFFSET + st.prev  * spacing - TRAINER_PEG_HALF) + 'px';
+
+      setTimeout(() => {
+        front.classList.remove('pegging');
+        back.classList.remove('pegging');
+      }, 350);
+
+      trainerUpdateScores();
+
+      if (st.score >= trainerState.maxPoints) {
+        showModal(`Trainer Board: Player ${player} reaches ${trainerState.maxPoints}!`);
+      }
+    }
+
+    function trainerReset() {
+      trainerState.players[1].score = 0;
+      trainerState.players[1].prev = 0;
+      trainerState.players[2].score = 0;
+      trainerState.players[2].prev = 0;
+      trainerResetPegs();
+      trainerUpdateScores();
+      trainerRecalc();
+    }
+
+    function checkPegCount() {
+      const v = parseInt(document.getElementById('peg-count').value,10);
+      const out = document.getElementById('peg-count-result');
+      if (isNaN(v) || v < 0) {
+        out.textContent = 'Enter a number between 0 and 31.';
+        out.style.color = '#CC3333';
+      } else if (v > 31) {
+        out.textContent = 'Too high: pegging total cannot exceed 31.';
+        out.style.color = '#CC3333';
+      } else if (v === 31) {
+        out.textContent = 'Exact 31: score 2 points.';
+        out.style.color = '#3366CC';
+      } else if (v === 15) {
+        out.textContent = '15 for 2 is available here.';
+        out.style.color = '#5d4037';
+      } else {
+        out.textContent = 'Valid running total. Keep pegging.';
+        out.style.color = '#5d4037';
+      }
+    }
+
+    window.addEventListener('resize', () => {
+      trainerRecalc();
+      if (offInitialized) offRecalc();
+    });
+
+    /***********************
+     * HAND SCORING TRAINER
+     ***********************/
+    function scoreHandTrainer() {
+      const handStr = document.getElementById('ht-hand').value || '';
+      const starterStr = document.getElementById('ht-starter').value || '';
+      const out = document.getElementById('ht-output');
+
+      const cardCodes = handStr.split(/\s+/).filter(Boolean);
+      if (cardCodes.length !== 4) {
+        out.textContent = 'Please enter exactly 4 hand cards.';
+        out.style.color = '#CC3333';
+        return;
+      }
+
+      const hand = cardCodes.map(parseCard);
+      if (hand.some(c => !c)) {
+        out.textContent = 'Invalid hand card format. Use like 5H, 10C, JD.';
+        out.style.color = '#CC3333';
+        return;
+      }
+
+      const starter = parseCard(starterStr);
+      if (!starter) {
+        out.textContent = 'Enter a valid starter card (e.g. 8C).';
+        out.style.color = '#CC3333';
+        return;
+      }
+
+      const { total, breakdown } = scoreCribHand(hand, starter, false);
+      out.style.color = '#5d4037';
+      out.innerHTML =
+        `<div>Hand: ${hand.map(cardLabel).join(' ')} + Starter ${cardLabel(starter)}</div>` +
+        `<div><strong>Total: ${total} points</strong></div>` +
+        `<div>${breakdown.join('<br>')}</div>`;
+    }
+
+    function htExample() {
+      document.getElementById('ht-hand').value = '5H 5D 6C 7S';
+      document.getElementById('ht-starter').value = '8C';
+      scoreHandTrainer(); // This will correctly show 12 points (2 fifteens, pair, double run)
+    }
+
+    /***********************
+     * DISCARD / CRIB TRAINER
+     ***********************/
+    let dtDeck = [];
+    let dtCards = [];
+
+    function dtDeal() {
+      dtDeck = makeDeck();
+      dtCards = drawRandom(dtDeck,6);
+      const cont = document.getElementById('dt-cards');
+      cont.innerHTML = '';
+      dtCards.forEach((c,idx) => {
+        const div = document.createElement('div');
+        div.className = 'card-pill';
+        div.textContent = cardLabel(c);
+        div.dataset.idx = idx;
+        div.onclick = () => {
+          div.classList.toggle('selected');
+        };
+        cont.appendChild(div);
+      });
+      document.getElementById('dt-output').textContent = '';
+    }
+
+    function dtAnalyze() {
+      if (!dtCards.length) {
+        dtDeal();
+        return;
+      }
+      const selected = Array.from(document.querySelectorAll('#dt-cards .card-pill.selected'))
+        .map(el => parseInt(el.dataset.idx,10));
+      const out = document.getElementById('dt-output');
+
+      if (selected.length !== 4) {
+        out.textContent = 'Select exactly 4 cards to keep (hand). Remaining 2 are crib discards.';
+        out.style.color = '#CC3333';
+        return;
+      }
+
+      const hand = selected.map(i => dtCards[i]);
+      const crib = dtCards.filter((_,i) => !selected.includes(i));
+
+      // Random starter from remaining deck
+      const starter = drawRandom([...dtDeck],1)[0];
+      const myCrib = document.getElementById('dt-my-crib').checked;
+
+      const handScore = scoreCribHand(hand, starter, false);
+      const cribScore = scoreCribHand(crib, starter, true);
+
+      out.style.color = '#5d4037';
+      out.innerHTML =
+        `<div>Starter: <strong>${cardLabel(starter)}</strong></div>` +
+        `<div>Hand: ${hand.map(cardLabel).join(' ')} → <strong>${handScore.total} pts</strong></div>` +
+        `<div>Crib (${myCrib ? 'your' : 'opponent\'s'}): ${crib.map(cardLabel).join(' ')} → <strong>${cribScore.total} pts</strong></div>` +
+        `<div style="margin-top:4px;font-size:0.8em;">
+          ${myCrib
+            ? 'Good crib cards (5s, pairs, connectors) help you.'
+            : 'High crib score here means you just fed your opponent.'}
+        </div>`;
+    }
+
+    /********************
+     * OFFICIAL 121 BOARD
+     ********************/
+    const OFF_OFFSET = 10;
+    const OFF_PEG_HALF = 12;
+    let offInitialized = false;
+
+    const offState = {
+      maxPoints:121,
+      players:{
+        1:{score:0, prev:0},
+        2:{score:0, prev:0}
+      }
+    };
+
+    function offInit() {
+      offInitialized = true;
+      buildHoles('off-holes', offState.maxPoints);
+      offResetPegs();
+      offUpdateScores();
+      offRecalc();
+    }
+
+    function offResetPegs() {
+      const p1f = document.getElementById('off-p1-front');
+      const p1b = document.getElementById('off-p1-back');
+      const p2f = document.getElementById('off-p2-front');
+      const p2b = document.getElementById('off-p2-back');
+      if (p1f) { p1f.style.left = (OFF_OFFSET-OFF_PEG_HALF)+'px'; p1f.classList.remove('back','pegging'); }
+      if (p1b) { p1b.style.left = (OFF_OFFSET-OFF_PEG_HALF)+'px'; p1b.classList.add('back'); p1b.classList.remove('pegging'); }
+      if (p2f) { p2f.style.left = (OFF_OFFSET-OFF_PEG_HALF)+'px'; p2f.classList.remove('back','pegging'); }
+      if (p2b) { p2b.style.left = (OFF_OFFSET-OFF_PEG_HALF)+'px'; p2b.classList.add('back'); p2b.classList.remove('pegging'); }
+      document.getElementById('off-log').innerHTML = '';
+    }
+
+    function offRecalc() {
+      const track = document.getElementById('off-track');
+      if (!track) return;
+      const innerWidth = track.clientWidth - (OFF_OFFSET*2);
+      if (innerWidth <= 0) return;
+      const spacing = innerWidth / offState.maxPoints;
+
+      [1,2].forEach(p => {
+        const st = offState.players[p];
+        const front = document.getElementById(`off-p${p}-front`);
+        const back  = document.getElementById(`off-p${p}-back`);
+        if (!front || !back) return;
+        front.style.left = (OFF_OFFSET + st.score * spacing - OFF_PEG_HALF) + 'px';
+        back.style.left  = (OFF_OFFSET + st.prev  * spacing - OFF_PEG_HALF) + 'px';
+      });
+    }
+
+    function offUpdateScores() {
+      const s1 = offState.players[1].score;
+      const s2 = offState.players[2].score;
+      document.getElementById('off-scores').textContent =
+        `Player 1: ${s1} | Player 2: ${s2}`;
+    }
+
+    function offApply() {
+      const player = parseInt(document.getElementById('off-player').value,10);
+      const pts = parseInt(document.getElementById('off-points').value,10);
+      const reason = (document.getElementById('off-reason').value || '').trim();
+      if (![1,2].includes(player) || isNaN(pts)) return;
+
+      const st = offState.players[player];
+      const old = st.score;
+      let ns = old + pts;
+      if (ns < 0) ns = 0;
+      if (ns > offState.maxPoints) ns = offState.maxPoints;
+
+      st.prev = old;
+      st.score = ns;
+
+      const track = document.getElementById('off-track');
+      const innerWidth = track.clientWidth - (OFF_OFFSET*2);
+      const spacing = innerWidth / offState.maxPoints;
+
+      const front = document.getElementById(`off-p${player}-front`);
+      const back  = document.getElementById(`off-p${player}-back`);
+      if (!front || !back) return;
+
+      front.classList.add('pegging');
+      back.classList.add('pegging');
+
+      front.style.left = (OFF_OFFSET + st.score * spacing - OFF_PEG_HALF) + 'px';
+      back.style.left  = (OFF_OFFSET + st.prev  * spacing - OFF_PEG_HALF) + 'px';
+
+      setTimeout(()=> {
+        front.classList.remove('pegging');
+        back.classList.remove('pegging');
+      }, 350);
+
+      offUpdateScores();
+      offLog(player, pts, ns, reason);
+
+      if (ns >= offState.maxPoints) {
+        showModal(`Official Board: Player ${player} wins (121)!`);
+      }
+
+      document.getElementById('off-points').value = '';
+      document.getElementById('off-reason').value = '';
+    }
+
+    function offLog(player, delta, newScore, reason) {
+      const log = document.getElementById('off-log');
+      const row = document.createElement('div');
+      row.className = `log-row log-p${player}`;
+      const sign = delta >= 0 ? '+' : '';
+      row.textContent =
+        `P${player} ${sign}${delta} → ${newScore}` +
+        (reason ? ` — ${reason}` : '');
+      log.prepend(row);
+    }
+
+    function offReset() {
+      offState.players[1].score = 0;
+      offState.players[1].prev = 0;
+      offState.players[2].score = 0;
+      offState.players[2].prev = 0;
+      offResetPegs();
+      offUpdateScores();
+      offRecalc();
+    }
+
+    /***********
+     * MODAL
+     ***********/
+    function showModal(msg) {
+      const m = document.getElementById('modal');
+      const t = document.getElementById('modal-message');
+      t.textContent = msg;
+      m.style.display = 'block';
+    }
+
+    function hideModal() {
+      document.getElementById('modal').style.display = 'none';
+    }
+
+    window.onclick = function(e) {
+      if (e.target && e.target.id === 'modal') {
+        hideModal();
+      }
+    };
+  </script>
+</body>
+</html>
