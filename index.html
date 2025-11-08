@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Cribbage Trainer (ACC-faithful, patched)</title>
+<title>Cribbage Trainer — Deck & Hands (ACC-faithful)</title>
 <style>
   :root{
     --hole:22px; --gap:6px; --peg:12px; --track-width: calc((var(--hole) + var(--gap)) * 61);
@@ -13,11 +13,11 @@
   header{padding:16px 20px;border-bottom:1px solid #232633;display:flex;gap:16px;align-items:center;flex-wrap:wrap}
   header h1{font-size:18px;margin:0;font-weight:600;letter-spacing:.2px}
   header .pill{background:#1a1e2b;border:1px solid #2a2f41;border-radius:999px;padding:6px 10px;font-size:12px}
-  main{max-width:1100px;margin:20px auto;padding:0 16px 40px}
+  main{max-width:1200px;margin:20px auto;padding:0 16px 40px}
   .row{display:flex;gap:16px;align-items:center;flex-wrap:wrap;margin-bottom:12px}
   .box{background:#121623;border:1px solid #232633;border-radius:10px;padding:12px}
   .controls{display:flex;gap:12px;flex-wrap:wrap}
-  .controls .group{display:flex;gap:8px;align-items:center}
+  .controls .group{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
   button,select,input[type="number"]{
     background:#182035;color:#e6e8ee;border:1px solid #2a2f41;border-radius:8px;
     padding:8px 10px;font:inherit;cursor:pointer
@@ -47,35 +47,54 @@
   .p1.back{background:#ff9c9c}
   .p2.front{background:#4da3ff}
   .p2.back{background:#99caff}
-  .running{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
-  .seq{font-family:ui-monospace,Consolas,monospace;background:#0e131f;border:1px solid #2a2f41;padding:6px 8px;border-radius:8px;min-height:32px;display:flex;gap:6px;flex-wrap:wrap}
-  .badge{padding:3px 6px;border-radius:6px;background:#1a2237;border:1px solid #2a2f41;font-size:12px}
-  .hint{color:#9aa3ba;font-size:12px}
   .hr{height:1px;background:#232633;margin:14px 0}
-  .grid{display:grid;grid-template-columns:repeat(13,1fr);gap:6px}
-  .cardbtn{padding:10px 0}
+  .hint{color:#9aa3ba;font-size:12px}
+  .badge{padding:3px 6px;border-radius:6px;background:#1a2237;border:1px solid #2a2f41;font-size:12px}
   .muted{color:#aeb6cc}
+
+  .hands{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .hand{background:#0f1422;border:1px solid #232633;border-radius:10px;padding:10px}
+  .hand .title{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+  .cards{display:flex;gap:6px;flex-wrap:wrap}
+  .card{
+    min-width: 42px; padding:8px 6px;border-radius:8px;border:1px solid #2a2f41;background:#0e131f;
+    display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;user-select:none
+  }
+  .card .rank{font-weight:700}
+  .card .suit{font-size:12px}
+  .heart,.diamond{color:#ff6b6b}
+  .club,.spade{color:#d9e1ff}
+  .card.unplayable{opacity:.4;cursor:not-allowed}
+  .card.not-your-turn{outline:1px dashed #2a2f41;opacity:.5;cursor:not-allowed}
+  .card.playable{outline:2px solid #4a82ff}
+
+  .starter{display:flex;align-items:center;gap:10px}
+  .starter .scard{padding:8px 10px;border-radius:8px;border:1px solid #2a2f41;background:#0e131f;display:inline-flex;gap:6px;align-items:center}
+  .starter .scard .suit{font-size:14px}
+  .ok{color:#8cff9a}
+  .warn{color:#ffb86b}
+  .err{color:#ff6b6b}
+
+  .seq{font-family:ui-monospace,Consolas,monospace;background:#0e131f;border:1px solid #2a2f41;padding:6px 8px;border-radius:8px;min-height:32px;display:flex;gap:6px;flex-wrap:wrap}
 </style>
 </head>
 <body>
 <header>
   <h1>Cribbage Trainer</h1>
-  <span class="pill">ACC-faithful movement & play scoring (patched)</span>
+  <span class="pill">ACC-faithful: leapfrog, Go flow, runs/pairs/15/31, Heels</span>
 </header>
 <main>
 
+  <!-- Status -->
   <div class="row status">
     <div class="card">
-      <div>Dealer: <span id="dealerLabel">P2</span> &nbsp;|&nbsp; Pone leads: <span id="leaderLabel">P1</span></div>
-      <div class="hint">After a GO, the opponent may play multiple cards in a row. Pone always leads each new sequence unless GO rules dictate otherwise.</div>
+      <div>Dealer: <span id="dealerLabel">P2</span> • Pone: <span id="poneLabel">P1</span></div>
+      <div>Leader (new sequence): <span id="leaderLabel">P1</span> • Turn: <span id="turnLabel">P1</span></div>
+      <div class="hint">After a Go, the opponent may play multiple cards in a row until 31 or they also cannot play.</div>
     </div>
     <div class="card">
       <div>Running Count</div>
       <div class="big" id="runningCount">0</div>
-    </div>
-    <div class="card">
-      <div>Turn</div>
-      <div class="big" id="turnLabel">P1</div>
     </div>
     <div class="card">
       <div>Last Score</div>
@@ -83,6 +102,7 @@
     </div>
   </div>
 
+  <!-- Tracks -->
   <div class="board-wrap">
     <div class="track" id="trackP1">
       <div class="label">P1 Track</div>
@@ -94,58 +114,60 @@
     </div>
   </div>
 
+  <!-- Starter + Heels -->
   <div class="box" style="margin-top:18px">
+    <div class="row starter">
+      <strong>Starter:</strong>
+      <div id="starterView" class="scard"><span id="starterRank">—</span><span id="starterSuit" class="suit"> </span></div>
+      <span id="heelsNote" class="hint muted">Cut starter to begin a hand. If it's a Jack, Dealer may take +2 (His Heels) before the first card is played.</span>
+      <button id="btnHeels" disabled>His Heels (+2 Dealer)</button>
+    </div>
+  </div>
+
+  <!-- Hands -->
+  <div class="box" style="margin-top:12px">
+    <div class="hands">
+      <div class="hand" id="handP1Box">
+        <div class="title"><strong>P1 Hand</strong><span class="hint">Playable cards glow</span></div>
+        <div class="cards" id="handP1"></div>
+      </div>
+      <div class="hand" id="handP2Box">
+        <div class="title"><strong>P2 Hand</strong><span class="hint">Playable cards glow</span></div>
+        <div class="cards" id="handP2"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Play controls -->
+  <div class="box" style="margin-top:12px">
     <div class="row">
       <strong>Play Phase</strong>
-      <span class="hint">Click a card for the player whose turn it is. Pairs/runs/15/31/last-card peg automatically.</span>
+      <span class="hint">Click a playable card in the current player's hand. Pairs/runs/15/31/last-card peg automatically.</span>
     </div>
 
-    <div class="row running">
-      <div>Sequence:</div>
+    <div class="row">
+      <div>Current sequence:</div>
       <div class="seq" id="seqView"></div>
     </div>
 
     <div class="row">
-      <div class="controls" style="width:100%">
-        <div class="group" style="flex:1; min-width:260px">
-          <div style="width:100%">
-            <div class="grid">
-              <button class="cardbtn" data-rank="1">A</button>
-              <button class="cardbtn" data-rank="2">2</button>
-              <button class="cardbtn" data-rank="3">3</button>
-              <button class="cardbtn" data-rank="4">4</button>
-              <button class="cardbtn" data-rank="5">5</button>
-              <button class="cardbtn" data-rank="6">6</button>
-              <button class="cardbtn" data-rank="7">7</button>
-              <button class="cardbtn" data-rank="8">8</button>
-              <button class="cardbtn" data-rank="9">9</button>
-              <button class="cardbtn" data-rank="10">10</button>
-              <button class="cardbtn" data-rank="11">J</button>
-              <button class="cardbtn" data-rank="12">Q</button>
-              <button class="cardbtn" data-rank="13">K</button>
-            </div>
-            <div class="hint" style="margin-top:6px">Face cards count 10 for the running total; rank still matters for pairs/runs.</div>
-          </div>
-        </div>
-
+      <div class="controls">
         <div class="group">
-          <button id="btnGo">Go</button>
+          <button id="btnGo" disabled>Go</button>
           <button id="btnResetSeq">Reset Sequence</button>
+          <span id="goHint" class="hint"></span>
         </div>
-
         <div class="group">
-          <button id="btnHeels">His Heels (+2 to Dealer)</button>
+          <button id="btnUndo" disabled>Undo</button>
         </div>
-
         <div class="group">
-          <button id="btnUndo">Undo last action</button>
-          <button id="btnNewGame">New Game</button>
+          <button id="btnDealNext">Deal Next Hand</button>
           <button id="btnSwapDealer">Swap Dealer</button>
+          <button id="btnNewGame">New Game</button>
         </div>
-
         <div class="group toggle">
           <input type="checkbox" id="chkMuggins">
-          <label for="chkMuggins">Muggins (manual award)</label>
+          <label for="chkMuggins">Muggins (manual)</label>
           <button id="btnMuggins" disabled>Give Muggins +X</button>
           <input type="number" id="mugginsPts" value="2" min="1" step="1" disabled>
         </div>
@@ -153,7 +175,8 @@
     </div>
   </div>
 
-  <div class="box" style="margin-top:18px">
+  <!-- Counting -->
+  <div class="box" style="margin-top:12px">
     <div class="row">
       <strong>Counting Phase</strong>
       <span class="hint">Order: Pone hand → Dealer hand → Crib. Zero = no peg movement.</span>
@@ -181,7 +204,8 @@
     </div>
   </div>
 
-  <div class="box" style="margin-top:18px">
+  <!-- Scores -->
+  <div class="box" style="margin-top:12px">
     <div class="row">
       <strong>Scores</strong>
       <div class="badge">P1: <span id="scoreP1">0</span></div>
@@ -191,47 +215,79 @@
     </div>
     <div class="hr"></div>
     <div class="hint">
-      Only the <em>back</em> peg moves by the points scored, jumps over the front, and becomes the new front. After a GO, the opponent may play several cards in a row. “Last card +1” is awarded only when both cannot play and the count isn’t 31.
+      Leapfrog: only the <em>back</em> peg moves by the points scored, jumps over the front, and becomes the new front. After a Go, the opponent may play several cards in a row. “Last card +1” is awarded when both cannot play and the count isn’t 31.
     </div>
   </div>
 
 </main>
 
 <script>
-/* ------------------ Core State ------------------ */
-const holes = 121; // 0..121
-const P1 = { id:'P1', track:'holesP1', front:0, back:0 };
-const P2 = { id:'P2', track:'holesP2', front:0, back:0 };
-let dealer = P2;   // default
-let pone = P1;
-let leader = pone; // who leads a new sequence
-let turn = leader; // whose turn to play a card
-let sequence = []; // cards in current sequence: {player, rank, value}
-let running = 0;
-let heelsAvailable = true;
-let goState = { active:false, caller:null, lastPlayer:null }; // GO flow
-let gameOver = false;
-const actionStack = []; // for Undo (all actions now)
+/* ================================
+   Core Structures & Utilities
+==================================*/
+const SUITS = ['♣','♦','♥','♠'];
+const SUIT_CLASS = s => (s==='♦'||s==='♥') ? 'diamond heart' : 'club spade';
 
-/* ------------------ DOM ------------------ */
+function mkDeck(){
+  const d=[];
+  for(let s=0;s<4;s++){
+    for(let r=1;r<=13;r++){
+      d.push({rank:r, suit:SUITS[s], value:Math.min(r,10)});
+    }
+  }
+  return d;
+}
+function shuffle(a){
+  for(let i=a.length-1;i>0;i--){
+    const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]];
+  }
+  return a;
+}
+function cardLabel(rank){ return ({11:'J',12:'Q',13:'K'}[rank] || (rank===1?'A':rank)); }
+
+/* Players, deck, hands, pegs */
+const P1 = { id:'P1', front:0, back:0, hand:[] };
+const P2 = { id:'P2', front:0, back:0, hand:[] };
+let dealer = P2, pone = P1, leader = pone, turn = leader;
+
+let deck = [];
+let starter = null;
+
+let sequence = []; // [{player, rank, value}]
+let running = 0;
+let heelsAvailable = false; // only if starter is Jack, before 1st play
+let goState = {active:false, caller:null, lastPlayer:null};
+let gameOver = false;
+
+const actionStack = []; // snapshots for Undo
+
+/* DOM */
 const holesP1 = document.getElementById('holesP1');
 const holesP2 = document.getElementById('holesP2');
 const dealerLabel = document.getElementById('dealerLabel');
+const poneLabel = document.getElementById('poneLabel');
 const leaderLabel = document.getElementById('leaderLabel');
 const turnLabel = document.getElementById('turnLabel');
 const runningCountEl = document.getElementById('runningCount');
-const seqView = document.getElementById('seqView');
 const lastScoreEl = document.getElementById('lastScore');
 const scoreP1 = document.getElementById('scoreP1');
 const scoreP2 = document.getElementById('scoreP2');
 const gameMsg = document.getElementById('gameMsg');
+const starterRankEl = document.getElementById('starterRank');
+const starterSuitEl = document.getElementById('starterSuit');
+const heelsNote = document.getElementById('heelsNote');
 
+const handP1El = document.getElementById('handP1');
+const handP2El = document.getElementById('handP2');
+
+const btnHeels = document.getElementById('btnHeels');
 const btnGo = document.getElementById('btnGo');
 const btnResetSeq = document.getElementById('btnResetSeq');
-const btnHeels = document.getElementById('btnHeels');
 const btnUndo = document.getElementById('btnUndo');
-const btnNewGame = document.getElementById('btnNewGame');
+const btnDealNext = document.getElementById('btnDealNext');
 const btnSwapDealer = document.getElementById('btnSwapDealer');
+const btnNewGame = document.getElementById('btnNewGame');
+const goHint = document.getElementById('goHint');
 
 const chkMuggins = document.getElementById('chkMuggins');
 const btnMuggins = document.getElementById('btnMuggins');
@@ -239,344 +295,405 @@ const mugginsPts = document.getElementById('mugginsPts');
 
 const btnStartCount = document.getElementById('btnStartCount');
 const countStage = document.getElementById('countStage');
-const poneHand = document.getElementById('poneHand');
-const dealerHand = document.getElementById('dealerHand');
-const cribPoints = document.getElementById('cribPoints');
+const poneHandIn = document.getElementById('poneHand');
+const dealerHandIn = document.getElementById('dealerHand');
+const cribPointsIn = document.getElementById('cribPoints');
 const btnCountPone = document.getElementById('btnCountPone');
 const btnCountDealer = document.getElementById('btnCountDealer');
 const btnCountCrib = document.getElementById('btnCountCrib');
 
-/* ------------------ Build Tracks ------------------ */
+const seqView = document.getElementById('seqView');
+
+/* Build tracks */
 function buildTrack(container){
-  container.innerHTML = '';
-  const row1 = document.createElement('div'); row1.className='holes';
-  const row2 = document.createElement('div'); row2.className='holes';
-  for(let i=0;i<=60;i++){ const h=document.createElement('div'); h.className='hole'; h.dataset.idx=i.toString(); row1.appendChild(h); }
-  for(let i=61;i<=121;i++){ const h=document.createElement('div'); h.className='hole'; h.dataset.idx=i.toString(); row2.appendChild(h); }
-  container.appendChild(row1); container.appendChild(row2);
+  container.innerHTML='';
+  const row1=document.createElement('div'); row1.className='holes';
+  const row2=document.createElement('div'); row2.className='holes';
+  for(let i=0;i<=60;i++){ const h=document.createElement('div'); h.className='hole'; h.dataset.idx=i; row1.appendChild(h); }
+  for(let i=61;i<=121;i++){ const h=document.createElement('div'); h.className='hole'; h.dataset.idx=i; row2.appendChild(h); }
+  container.append(row1,row2);
 }
 buildTrack(holesP1);
 buildTrack(holesP2);
 
+/* Helpers */
 function holeEl(player, idx){
   const container = (player===P1) ? holesP1 : holesP2;
   return container.querySelector(`.hole[data-idx="${idx}"]`);
 }
 function drawPegs(){
   [holesP1, holesP2].forEach(c=>c.querySelectorAll('.peg').forEach(p=>p.remove()));
-  // P1
   [['front','p1 front'],['back','p1 back']].forEach(([w,cls])=>{
-    const idx = P1[w]; const el = holeEl(P1, idx); const peg = document.createElement('div'); peg.className=`peg ${cls}`; el.appendChild(peg);
+    const el = holeEl(P1, P1[w]); const peg=document.createElement('div'); peg.className=`peg ${cls}`; el.appendChild(peg);
   });
-  // P2
   [['front','p2 front'],['back','p2 back']].forEach(([w,cls])=>{
-    const idx = P2[w]; const el = holeEl(P2, idx); const peg = document.createElement('div'); peg.className=`peg ${cls}`; el.appendChild(peg);
+    const el = holeEl(P2, P2[w]); const peg=document.createElement('div'); peg.className=`peg ${cls}`; el.appendChild(peg);
   });
   scoreP1.textContent = P1.front;
   scoreP2.textContent = P2.front;
 }
+function updateStarterView(){
+  if(starter){
+    starterRankEl.textContent = cardLabel(starter.rank);
+    starterSuitEl.textContent = starter.suit;
+    starterSuitEl.className = 'suit ' + (starter.suit==='♦'||starter.suit==='♥'?'heart diamond':'club spade');
+  }else{
+    starterRankEl.textContent='—';
+    starterSuitEl.textContent='';
+    starterSuitEl.className='suit';
+  }
+  btnHeels.disabled = !(starter && starter.rank===11 && heelsAvailable);
+  heelsNote.textContent = (starter && starter.rank===11)
+    ? 'Starter is a Jack: Dealer may peg +2 (His Heels) before the first card is played.'
+    : 'Cut starter to begin a hand. If it is a Jack, Dealer may take +2 (His Heels) before the first card is played.';
+}
 function uiSync(){
-  dealerLabel.textContent = (dealer===P1?'P1':'P2');
-  leaderLabel.textContent = (leader===P1?'P1':'P2');
-  turnLabel.textContent = (turn===P1?'P1':'P2');
+  dealerLabel.textContent = dealer.id;
+  poneLabel.textContent = pone.id;
+  leaderLabel.textContent = leader.id;
+  turnLabel.textContent = turn.id;
   runningCountEl.textContent = running;
-  seqView.innerHTML = sequence.map(c=>`<span class="badge">${c.player.id}:${cardLabel(c.rank)} (${c.value})</span>`).join('');
-  btnHeels.disabled = !heelsAvailable || gameOver;
-  btnGo.disabled = gameOver;
-  btnResetSeq.disabled = gameOver;
-  btnUndo.disabled = gameOver || actionStack.length===0;
+  seqView.innerHTML = sequence.map(c=>
+    `<span class="badge">${c.player.id}:${cardLabel(c.rank)}(${c.value})</span>`).join('');
+
+  renderHand(P1, handP1El);
+  renderHand(P2, handP2El);
+
+  btnHeels.disabled = !(starter && starter.rank===11 && heelsAvailable) || gameOver;
+  btnUndo.disabled = actionStack.length===0 || gameOver;
+
+  // Go button only enabled when current player truly cannot play and sequence is not empty
+  const canPlayNow = playable(turn).length>0;
+  btnGo.disabled = gameOver || sequence.length===0 || canPlayNow;
+  goHint.textContent = canPlayNow ? 'You have playable cards; Go is not allowed.' : (sequence.length===0 ? 'Lead to begin a sequence.' : '');
+
   btnMuggins.disabled = !chkMuggins.checked || gameOver;
   mugginsPts.disabled = !chkMuggins.checked;
 }
-
-/* ------------------ Snapshots (Undo) ------------------ */
-function snapshot(label=''){
-  return {
-    kind:'state',
-    label,
-    P1:{front:P1.front, back:P1.back},
-    P2:{front:P2.front, back:P2.back},
-    leader: leader.id,
-    turn: turn.id,
-    running,
-    sequence: JSON.parse(JSON.stringify(sequence)),
-    heelsAvailable,
-    goState: JSON.parse(JSON.stringify(goState)),
-    lastScore: lastScoreEl.textContent,
-    gameOver,
-    gameMsg: gameMsg.textContent
-  };
-}
-function restore(snap){
-  P1.front=snap.P1.front; P1.back=snap.P1.back;
-  P2.front=snap.P2.front; P2.back=snap.P2.back;
-  leader = (snap.leader==='P1')?P1:P2;
-  turn = (snap.turn==='P1')?P1:P2;
-  running = snap.running;
-  sequence = snap.sequence;
-  heelsAvailable = snap.heelsAvailable;
-  goState = snap.goState;
-  lastScoreEl.textContent = snap.lastScore;
-  gameOver = snap.gameOver;
-  gameMsg.textContent = snap.gameMsg;
-  drawPegs(); uiSync();
-}
-
-/* ------------------ Utilities ------------------ */
-function cardLabel(rank){ return ({11:'J',12:'Q',13:'K'}[rank] || (rank===1?'A':rank)); }
-function valForRank(rank){ return Math.min(rank, 10); }
 function endGameIfNeeded(player){
   if(player.front>=121){
     gameOver = true;
     gameMsg.textContent = `Game over: ${player.id} pegs out at 121`;
   }
 }
+function snapshot(label=''){
+  return {
+    label,
+    P1:{front:P1.front, back:P1.back, hand: structuredClone(P1.hand)},
+    P2:{front:P2.front, back:P2.back, hand: structuredClone(P2.hand)},
+    deck: structuredClone(deck),
+    starter: starter ? {...starter} : null,
+    heelsAvailable,
+    leader: leader.id,
+    dealer: dealer.id,
+    pone: pone.id,
+    turn: turn.id,
+    sequence: structuredClone(sequence),
+    running,
+    goState: structuredClone(goState),
+    lastScore: lastScoreEl.textContent,
+    gameOver,
+    gameMsg: gameMsg.textContent
+  };
+}
+function restore(s){
+  P1.front=s.P1.front; P1.back=s.P1.back; P1.hand=structuredClone(s.P1.hand);
+  P2.front=s.P2.front; P2.back=s.P2.back; P2.hand=structuredClone(s.P2.hand);
+  deck = structuredClone(s.deck);
+  starter = s.starter ? {...s.starter} : null;
+  heelsAvailable = s.heelsAvailable;
+  leader = (s.leader==='P1')?P1:P2;
+  dealer = (s.dealer==='P1')?P1:P2;
+  pone   = (s.pone  ==='P1')?P1:P2;
+  turn   = (s.turn  ==='P1')?P1:P2;
+  sequence = structuredClone(s.sequence);
+  running = s.running;
+  goState = structuredClone(s.goState);
+  lastScoreEl.textContent = s.lastScore;
+  gameOver = s.gameOver;
+  gameMsg.textContent = s.gameMsg;
+  drawPegs(); updateStarterView(); uiSync();
+}
 
-/* Leapfrog: move ONLY the back peg, then swap roles */
+/* Leapfrog: ONLY the back peg moves, then becomes new front */
 function leapfrog(player, points, label=''){
-  if(points<=0) return; // zero = no movement
+  if(points<=0) return;
   const prev = snapshot(`peg ${player.id} +${points} ${label}`);
   const target = Math.min(121, player.back + points);
   player.back = target;
-  [player.front, player.back] = [player.back, player.front]; // swap
+  [player.front, player.back] = [player.back, player.front];
   drawPegs();
   lastScoreEl.textContent = `${player.id} +${points} ${label}`;
   endGameIfNeeded(player);
   actionStack.push(prev);
 }
 
-/* ------------------ Scoring During Play ------------------ */
+/* Playability & Renders */
+function playable(player){
+  return player.hand.filter(c => running + c.value <= 31);
+}
+function renderHand(player, container){
+  container.innerHTML='';
+  const canPlay = playable(player).map(c => c.id);
+  const itsTurn = (turn===player) && !gameOver;
+  player.hand.forEach((c,idx)=>{
+    const el=document.createElement('div'); el.className='card';
+    const r=document.createElement('div'); r.className='rank'; r.textContent=cardLabel(c.rank);
+    const s=document.createElement('div'); s.className='suit '+SUIT_CLASS(c.suit); s.textContent=c.suit;
+    el.append(r,s);
+
+    const isPlayable = itsTurn && (running + c.value <= 31);
+    if(!itsTurn) el.classList.add('not-your-turn');
+    if(!isPlayable) el.classList.add('unplayable');
+    else el.classList.add('playable');
+
+    el.addEventListener('click', ()=>{
+      if(!itsTurn || !isPlayable || gameOver) return;
+      onPlayCard(player, idx);
+    });
+    container.appendChild(el);
+  });
+}
+
+/* ================================
+   Deal & Hand Flow
+==================================*/
+function dealNextHand(toggleDealer=true){
+  // Snapshot (so Undo can restore previous hand/deal if desired)
+  actionStack.push(snapshot('deal next hand'));
+
+  // alternate dealer if requested
+  if(toggleDealer) [dealer, pone] = (dealer===P1) ? [P2,P1] : [P1,P2];
+  leader = pone; turn = leader;
+
+  // new deck & hands
+  deck = shuffle(mkDeck());
+  P1.hand = []; P2.hand = [];
+  for(let i=0;i<6;i++){ P1.hand.push({...deck.pop(), id:`P1_${i}_${Math.random()}`}); P2.hand.push({...deck.pop(), id:`P2_${i}_${Math.random()}`}); }
+
+  // cut starter
+  starter = deck.pop();
+  heelsAvailable = (starter.rank===11); // Jack
+  lastScoreEl.textContent = '—';
+  gameMsg.textContent = '—';
+  sequence = []; running = 0; goState={active:false, caller:null, lastPlayer:null};
+
+  updateStarterView(); drawPegs(); uiSync();
+}
+
+/* ================================
+   Scoring During Play
+==================================*/
 function scoreRun(seq){
-  // Longest tail run (k>=3), no duplicates, consecutive ranks (order ignored)
-  let best = 0;
-  for(let k = seq.length; k>=3; k--){
-    const slice = seq.slice(-k).map(c=>c.rank);
-    const set = new Set(slice);
-    if(set.size !== k) continue;
-    const min = Math.min(...slice), max = Math.max(...slice);
-    if(max - min + 1 === k){ best = k; break; }
+  // Longest tail run (k>=3), unique ranks + consecutive ranks
+  let best=0;
+  for(let k=seq.length;k>=3;k--){
+    const slice=seq.slice(-k).map(c=>c.rank);
+    const set=new Set(slice);
+    if(set.size!==k) continue;
+    const min=Math.min(...slice), max=Math.max(...slice);
+    if(max-min+1===k){ best=k; break; }
   }
   return best;
 }
 
-function playCard(rank){
+function onPlayCard(player, handIndex){
   if(gameOver) return;
 
-  // Snapshot BEFORE any state change (so Undo can roll back non-scoring plays too)
-  actionStack.push( snapshot(`play ${turn.id} ${cardLabel(rank)}`) );
+  // Take snapshot (undo will revert hands, sequence, etc.)
+  actionStack.push(snapshot(`play ${player.id}`));
 
-  if(heelsAvailable) heelsAvailable = false;
+  // Heels forfeiture if not taken
+  if(heelsAvailable) heelsAvailable=false, updateStarterView();
 
-  const value = valForRank(rank);
-  if(running + value > 31){
-    alert("That would exceed 31. Press 'Go' if you cannot play.");
-    actionStack.pop(); // invalid action; discard snapshot
-    return;
-  }
-
-  // Register card
-  sequence.push({player:turn, rank, value});
-  running += value;
-  goState.lastPlayer = turn;
+  // Play chosen card
+  const [card] = player.hand.splice(handIndex,1);
+  sequence.push({player, rank:card.rank, value:card.value});
+  running += card.value;
+  goState.lastPlayer = player;
 
   // Compute pegging from this play
-  let gained = 0; const reasons = [];
+  let gained=0, reasons=[];
 
-  // Pairs/Trips/Quads on tail
-  let same = 1;
-  for(let i=sequence.length-2; i>=0; i--){
-    if(sequence[i].rank === rank) same++;
-    else break;
+  // Pairs/Trips/Quads (tail)
+  let same=1;
+  for(let i=sequence.length-2;i>=0;i--){
+    if(sequence[i].rank===card.rank) same++; else break;
   }
-  if(same===2){ gained += 2; reasons.push('Pair +2'); }
-  else if(same===3){ gained += 6; reasons.push('Pair Royal +6'); }
-  else if(same===4){ gained += 12; reasons.push('Double Pair Royal +12'); }
+  if(same===2){ gained+=2; reasons.push('Pair +2'); }
+  else if(same===3){ gained+=6; reasons.push('Pair Royal +6'); }
+  else if(same===4){ gained+=12; reasons.push('Double Pair Royal +12'); }
 
   // Runs
   const runPts = scoreRun(sequence);
-  if(runPts>0){ gained += runPts; reasons.push(`Run of ${runPts} +${runPts}`); }
+  if(runPts>0){ gained+=runPts; reasons.push(`Run of ${runPts} +${runPts}`); }
 
-  // 15 and 31
-  if(running===15){ gained += 2; reasons.push('Fifteen +2'); }
-  if(running===31){ gained += 2; reasons.push('Thirty-one +2'); }
+  // Fifteen / Thirty-one
+  if(running===15){ gained+=2; reasons.push('Fifteen +2'); }
+  if(running===31){ gained+=2; reasons.push('Thirty-one +2'); }
 
-  if(gained>0){ leapfrog(turn, gained, reasons.join(', ')); }
+  if(gained>0) leapfrog(player, gained, reasons.join(', '));
 
-  // Turn logic (patched):
-  // - If 31: sequence ends; next leader is opponent; next turn = leader; clear GO state.
-  // - Else if GO is active: opponent of caller may continue to play multiple cards (keep turn).
-  // - Else: alternate turn normally.
+  // 31 ends sequence; other player leads next
   if(running===31){
-    sequence = []; running = 0;
-    leader = (turn===P1)?P2:P1; // after 31, other player leads next
+    sequence=[]; running=0;
+    leader = (player===P1)?P2:P1;
     turn = leader;
     goState = {active:false, caller:null, lastPlayer:null};
   } else {
+    // Go-active flow: opponent of caller keeps playing; else alternate normally
     if(goState.active){
-      // Keep play with the opponent of the caller
-      const opponent = (goState.caller===P1)?P2:P1;
-      turn = opponent; // do NOT alternate
+      turn = (goState.caller===P1)?P2:P1; // remain with non-caller
     } else {
-      // Normal alternation
-      turn = (turn===P1)?P2:P1;
+      turn = (player===P1)?P2:P1;
     }
   }
 
-  uiSync();
+  // If hands empty, play is over → allow counting
+  if(P1.hand.length===0 && P2.hand.length===0){
+    // If the sequence is still open, the last-card +1 must be resolved via GO
+    // We keep it manual: press Go if neither can play (which should be true when hands are empty).
+  }
+
+  drawPegs(); uiSync();
 }
 
-/* ------------------ Go / Sequence Reset ------------------ */
-btnGo.addEventListener('click', ()=>{
+/* ================================
+   GO / Sequence Reset
+==================================*/
+document.getElementById('btnGo').addEventListener('click', ()=>{
   if(gameOver) return;
 
-  // Snap before changing go-state
-  actionStack.push( snapshot('Go button') );
-
+  // Must not allow Go if playable cards exist
+  if(playable(turn).length>0){
+    alert("You have a playable card: calling 'Go' here would be a renege in tournament play. (Blocked)");
+    return;
+  }
   if(sequence.length===0){
-    alert('No cards in sequence yet.');
-    actionStack.pop();
+    alert('Lead to begin a sequence.');
     return;
   }
 
+  actionStack.push(snapshot('Go'));
+
   if(goState.active){
-    const other = (goState.caller===P1)?P2:P1;
-    if(turn !== other){
-      // It's the other player's turn to try; you shouldn't press GO here
-      // but we'll accept it and treat as "both cannot play"
-    }
-    // Second GO => award last card +1 to last player if not 31
+    // Both cannot play → last card +1 (if not 31)
     if(running !== 31 && goState.lastPlayer){
       leapfrog(goState.lastPlayer, 1, 'Last card +1');
     }
-    // Reset sequence; initial GO-caller leads next
-    sequence = []; running = 0;
+    // Reset sequence; initial Go-caller leads next
+    sequence=[]; running=0;
     leader = goState.caller;
     turn = leader;
     goState = {active:false, caller:null, lastPlayer:null};
   } else {
-    // First GO: mark and pass turn to opponent who may keep playing
-    goState.active = true;
-    goState.caller = turn;
+    // First Go: pass play to opponent (who may continue to play multiple)
+    goState = {active:true, caller:turn, lastPlayer:goState.lastPlayer};
     turn = (turn===P1)?P2:P1;
   }
   uiSync();
 });
 
-/* Manual sequence reset: no points are awarded */
-btnResetSeq.addEventListener('click', ()=>{
+document.getElementById('btnResetSeq').addEventListener('click', ()=>{
   if(gameOver) return;
-  actionStack.push( snapshot('Reset Sequence') );
-  sequence = []; running = 0;
-  // If GO was active, the initial GO-caller leads
-  if(goState.active && goState.caller){ leader = goState.caller; }
+  actionStack.push(snapshot('Reset Sequence'));
+  sequence=[]; running=0;
+  // If GO was active, the initial caller leads
+  if(goState.active && goState.caller) leader = goState.caller;
   turn = leader;
   goState = {active:false, caller:null, lastPlayer:null};
   uiSync();
 });
 
-/* ------------------ Heels (+2 before first card) ------------------ */
+/* ================================
+   Heels (+2 to Dealer before 1st card)
+==================================*/
 btnHeels.addEventListener('click', ()=>{
   if(gameOver) return;
-  if(!heelsAvailable){
-    alert('Heels must be taken before the first card is played.');
-    return;
-  }
-  actionStack.push( snapshot('Heels') );
+  if(!(starter && starter.rank===11 && heelsAvailable)) return;
+  actionStack.push(snapshot('Heels'));
   leapfrog(dealer, 2, 'His Heels +2');
-  heelsAvailable = false;
-  uiSync();
+  heelsAvailable=false;
+  updateStarterView(); uiSync();
 });
 
-/* ------------------ Card Buttons ------------------ */
-document.querySelectorAll('.cardbtn').forEach(btn=>{
-  btn.addEventListener('click', ()=>{
-    const rank = Number(btn.dataset.rank);
-    playCard(rank);
-  });
-});
-
-/* ------------------ Undo (now for all actions) ------------------ */
-btnUndo.addEventListener('click', ()=>{
-  if(actionStack.length===0 || gameOver) return;
-  const snap = actionStack.pop();
-  restore(snap);
-});
-
-/* ------------------ Counting Phase ------------------ */
-let counting = false, countingStep = 0; // 1: pone, 2: dealer, 3: crib
-const btnStartCount = document.getElementById('btnStartCount');
+/* ================================
+   Counting Phase (manual inputs)
+==================================*/
+let counting=false, countingStep=0; // 1: pone, 2: dealer, 3: crib
 btnStartCount.addEventListener('click', ()=>{
   if(gameOver){ alert('Game finished. Start a new game.'); return; }
-  counting = true; countingStep = 1;
-  countStage.textContent = 'Pone Hand';
-  btnCountPone.disabled = false; btnCountDealer.disabled = true; btnCountCrib.disabled = true;
+  counting=true; countingStep=1;
+  countStage.textContent='Pone Hand';
+  btnCountPone.disabled=false; btnCountDealer.disabled=true; btnCountCrib.disabled=true;
 });
-
 btnCountPone.addEventListener('click', ()=>{
   if(!counting || countingStep!==1) return;
-  actionStack.push( snapshot('Count Pone') );
-  const pts = Number(poneHand.value||0);
-  if(pts>0) leapfrog(pone, pts, 'Pone hand');
-  countingStep = 2; countStage.textContent = 'Dealer Hand';
-  btnCountPone.disabled = true; btnCountDealer.disabled = false; uiSync();
+  actionStack.push(snapshot('Count Pone'));
+  const pts=Number(poneHandIn.value||0); if(pts>0) leapfrog(pone, pts, 'Pone hand');
+  countingStep=2; countStage.textContent='Dealer Hand';
+  btnCountPone.disabled=true; btnCountDealer.disabled=false; uiSync();
 });
 btnCountDealer.addEventListener('click', ()=>{
   if(!counting || countingStep!==2) return;
-  actionStack.push( snapshot('Count Dealer') );
-  const pts = Number(dealerHand.value||0);
-  if(pts>0) leapfrog(dealer, pts, 'Dealer hand');
-  countingStep = 3; countStage.textContent = 'Crib (Dealer)';
-  btnCountDealer.disabled = true; btnCountCrib.disabled = false; uiSync();
+  actionStack.push(snapshot('Count Dealer'));
+  const pts=Number(dealerHandIn.value||0); if(pts>0) leapfrog(dealer, pts, 'Dealer hand');
+  countingStep=3; countStage.textContent='Crib (Dealer)';
+  btnCountDealer.disabled=true; btnCountCrib.disabled=false; uiSync();
 });
 btnCountCrib.addEventListener('click', ()=>{
   if(!counting || countingStep!==3) return;
-  actionStack.push( snapshot('Count Crib') );
-  const pts = Number(cribPoints.value||0);
-  if(pts>0) leapfrog(dealer, pts, 'Crib');
-  counting = false; countingStep = 0;
-  countStage.textContent = 'Done';
-  btnCountCrib.disabled = true; uiSync();
+  actionStack.push(snapshot('Count Crib'));
+  const pts=Number(cribPointsIn.value||0); if(pts>0) leapfrog(dealer, pts, 'Crib');
+  counting=false; countingStep=0; countStage.textContent='Done';
+  btnCountCrib.disabled=true; uiSync();
 });
 
-/* ------------------ Muggins (manual) ------------------ */
+/* ================================
+   Undo / Muggins / Game Controls
+==================================*/
+btnUndo.addEventListener('click', ()=>{
+  if(actionStack.length===0 || gameOver) return;
+  const snap=actionStack.pop(); restore(snap);
+});
+
 chkMuggins.addEventListener('change', ()=>{
   btnMuggins.disabled = !chkMuggins.checked || gameOver;
   mugginsPts.disabled = !chkMuggins.checked;
 });
 btnMuggins.addEventListener('click', ()=>{
   if(!chkMuggins.checked || gameOver) return;
-  actionStack.push( snapshot('Muggins manual') );
-  const pts = Math.max(1, Number(mugginsPts.value||0));
+  actionStack.push(snapshot('Muggins'));
+  const pts=Math.max(1,Number(mugginsPts.value||0));
   const beneficiary = (turn===P1)?P2:P1; // award to non-current
   leapfrog(beneficiary, pts, 'Muggins (manual)');
   uiSync();
 });
 
-/* ------------------ Game / Dealer Controls ------------------ */
-btnNewGame.addEventListener('click', ()=>{ resetGame(false); });
+btnDealNext.addEventListener('click', ()=> dealNextHand(true));
 btnSwapDealer.addEventListener('click', ()=>{
-  actionStack.push( snapshot('Swap Dealer') );
-  [dealer, pone] = (dealer===P1) ? [P2, P1] : [P1, P2];
-  leader = pone; turn = leader; heelsAvailable = true; uiSync();
+  actionStack.push(snapshot('Swap Dealer'));
+  [dealer, pone] = (dealer===P1) ? [P2,P1] : [P1,P2];
+  leader = pone; turn = leader;
+  updateStarterView(); uiSync();
+});
+btnNewGame.addEventListener('click', ()=>{
+  // full reset of scores and start fresh hand
+  actionStack.length=0;
+  P1.front=0; P1.back=0; P2.front=0; P2.back=0;
+  drawPegs();
+  gameOver=false; gameMsg.textContent='—'; lastScoreEl.textContent='—';
+  dealer=P2; pone=P1; leader=pone; turn=leader;
+  sequence=[]; running=0; goState={active:false,caller:null,lastPlayer:null}; heelsAvailable=false; starter=null;
+  updateStarterView(); uiSync();
+  dealNextHand(false); // keep dealer as set above
 });
 
-/* ------------------ Reset ------------------ */
-function resetGame(full=true){
-  actionStack.length = 0;
-  [P1, P2].forEach(p=>{ p.front=0; p.back=0; });
-  drawPegs();
-  sequence = []; running = 0;
-  heelsAvailable = true;
-  goState = {active:false, caller:null, lastPlayer:null};
-  gameOver = false; gameMsg.textContent = '—';
-  leader = pone; turn = leader;
-  if(full){ dealer = P2; pone = P1; leader = pone; turn = leader; }
-  uiSync();
-}
-
-/* ------------------ Boot ------------------ */
-drawPegs();
-uiSync();
+/* ================================
+   Boot
+==================================*/
+drawPegs(); updateStarterView(); uiSync();
+dealNextHand(false); // initial hand, dealer = P2, pone = P1
 </script>
 </body>
 </html>
