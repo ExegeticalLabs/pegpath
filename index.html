@@ -3,11 +3,11 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Cribbage Trainer — Minimal, ACC-faithful</title>
+<title>Cribbage Trainer — Minimal & ACC-faithful</title>
 <style>
   :root{
     --bg:#0f1115; --panel:#121623; --border:#232633; --ink:#e6e8ee; --muted:#9aa3ba;
-    --accent:#4a82ff; --ok:#8cff9a; --warn:#ffb86b;
+    --accent:#4a82ff; --ok:#8cff9a;
     --hole:22px; --gap:6px; --peg:12px;
   }
   *{box-sizing:border-box}
@@ -16,7 +16,7 @@
   header h1{margin:0;font-size:16px;font-weight:600;letter-spacing:.2px}
   .subtle{color:var(--muted);font-size:12px}
 
-  main{max-width:980px;margin:18px auto 40px;padding:0 16px;display:grid;gap:14px}
+  main{max-width:980px;margin:18px auto 42px;padding:0 16px;display:grid;gap:14px}
 
   /* status */
   .status{display:grid;grid-template-columns:1fr auto auto;gap:8px;align-items:center}
@@ -31,7 +31,12 @@
   .hole{width:var(--hole);height:var(--hole);border-radius:50%;background:#2a2f41;outline:1px solid #0e1220;position:relative}
   .hole[data-idx="0"]{box-shadow:0 0 0 2px #2f3b58 inset}
   .hole[data-idx="121"]{background:#2d3147;outline:2px solid var(--ok)}
-  .peg{position:absolute;width:var(--peg);height:var(--peg);border-radius:50%;top:50%;left:50%;transform:translate(-50%,-50%);box-shadow:0 0 0 2px rgba(0,0,0,.35);animation:peg-pop .18s ease-out}
+  .peg{
+    position:absolute;width:var(--peg);height:var(--peg);border-radius:50%;
+    top:50%;left:50%;transform:translate(-50%,-50%);
+    box-shadow:0 0 0 2px rgba(0,0,0,.35);
+    animation:peg-pop .18s ease-out;
+  }
   .p1.front{background:#ff4d4d}.p1.back{background:#ff9898}
   .p2.front{background:#4da3ff}.p2.back{background:#9cc8ff}
   @keyframes peg-pop{from{transform:translate(-50%,-50%) scale(.65);opacity:.65}to{transform:translate(-50%,-50%) scale(1);opacity:1}}
@@ -44,6 +49,9 @@
   button:disabled{opacity:.5;cursor:not-allowed}
   .badge{padding:3px 8px;border:1px solid var(--border);background:#141a2a;border-radius:999px;font-size:12px}
   .seq{display:flex;gap:6px;flex-wrap:wrap;min-height:28px;padding:6px 8px;border:1px solid var(--border);background:#0e131f;border-radius:10px;font-family:ui-monospace,Consolas,monospace}
+
+  /* focus */
+  :focus-visible{outline:2px solid var(--ok);outline-offset:2px;border-radius:10px}
 </style>
 </head>
 <body>
@@ -78,14 +86,16 @@
   <section class="panel" aria-label="Controls">
     <div class="row">
       <div class="badge">Starter: <span id="starterBadge">—</span></div>
-      <button id="btnCut" class="primary">Cut Starter</button>
-      <button id="btnHeels">His Heels +2</button>
+      <button id="btnCut" class="primary" title="Cut the starter">Cut Starter</button>
+      <button id="btnHeels" title="Dealer +2 if starter is a Jack">His Heels +2</button>
+
       <span class="badge" id="lastScore">—</span>
       <span style="margin-left:auto"></span>
-      <button id="btnGo">Go</button>
-      <button id="btnReset">Reset Sequence</button>
+
+      <button id="btnGo" title="If you cannot play, call Go">Go</button>
+      <button id="btnReset" title="Clear the current sequence">Reset Sequence</button>
       <button id="btnUndo">Undo</button>
-      <button id="btnSwap">Swap Dealer</button>
+      <button id="btnSwap" title="Swap dealer/pone">Swap Dealer</button>
       <button id="btnNew">New Game</button>
     </div>
 
@@ -95,24 +105,27 @@
     </div>
 
     <div class="row">
-      <div class="badge">Play a card:</div>
+      <div class="badge">Play a card</div>
       <div id="cardRow" class="row"></div>
     </div>
   </section>
 </main>
 
 <script>
-/* ---------- Core model (no hands, just pegging) ---------- */
+/* ========== Core model (minimal: buttons A–K, no hands) ========== */
 const label = r => ({11:'J',12:'Q',13:'K'}[r] || (r===1?'A':r));
-const val = r => Math.min(r,10);
+const val   = r => Math.min(r, 10);
+
 const P1 = { id:'P1', front:0, back:0 };
 const P2 = { id:'P2', front:0, back:0 };
+
 let dealer=P2, pone=P1, leader=pone, turn=leader;
 
 let starter=null, heelsAvailable=false;
 let seq=[], running=0;
 let go={active:false, caller:null, lastPlayer:null};
 let gameOver=false;
+
 const undo=[];
 
 /* ---------- DOM ---------- */
@@ -127,7 +140,7 @@ const btnGo=document.getElementById('btnGo'), btnReset=document.getElementById('
 const btnUndo=document.getElementById('btnUndo'), btnSwap=document.getElementById('btnSwap');
 const btnNew=document.getElementById('btnNew');
 
-/* ---------- Build board ---------- */
+/* ---------- Board ---------- */
 function buildRow(container, from, to){
   container.innerHTML='';
   for(let i=from;i<=to;i++){
@@ -135,32 +148,36 @@ function buildRow(container, from, to){
   }
 }
 function hole(player, idx){
-  const rows = (player===P1)?[p1r1,p1r2]:[p2r1,p2r2];
-  const row = (idx<=60)?rows[0]:rows[1];
+  const rows=(player===P1)?[p1r1,p1r2]:[p2r1,p2r2];
+  const row=(idx<=60)?rows[0]:rows[1];
   return row.querySelector(`.hole[data-idx="${idx}"]`);
 }
 function drawPegs(){
   [p1r1,p1r2,p2r1,p2r2].forEach(c=>c.querySelectorAll('.peg').forEach(p=>p.remove()));
   [['front','p1 front'],['back','p1 back']].forEach(([w,cls])=>{
-    const el = hole(P1,P1[w]); const peg=document.createElement('div'); peg.className=`peg ${cls}`; el.appendChild(peg);
+    const el=hole(P1,P1[w]); const peg=document.createElement('div'); peg.className=`peg ${cls}`; el.appendChild(peg);
   });
   [['front','p2 front'],['back','p2 back']].forEach(([w,cls])=>{
-    const el = hole(P2,P2[w]); const peg=document.createElement('div'); peg.className=`peg ${cls}`; el.appendChild(peg);
+    const el=hole(P2,P2[w]); const peg=document.createElement('div'); peg.className=`peg ${cls}`; el.appendChild(peg);
   });
 }
 
-/* ---------- UI helpers ---------- */
+/* ---------- UI ---------- */
 function snapshot(label=''){
   undo.push({
-    label, P1:{...P1}, P2:{...P2}, leader:leader.id, dealer:dealer.id, pone:pone.id, turn:turn.id,
-    starter: starter ? {...starter} : null, heelsAvailable, seq:[...seq], running, go:{...go}, last:lastScore.textContent, gameOver
+    label, P1:{...P1}, P2:{...P2},
+    leader:leader.id, dealer:dealer.id, pone:pone.id, turn:turn.id,
+    starter: starter?{...starter}:null, heelsAvailable,
+    seq:[...seq], running, go:{...go},
+    last:lastScore.textContent, gameOver
   });
   btnUndo.disabled=false;
 }
 function restore(s){
   Object.assign(P1,s.P1); Object.assign(P2,s.P2);
   leader=(s.leader==='P1')?P1:P2; dealer=(s.dealer==='P1')?P1:P2; pone=(s.pone==='P1')?P1:P2; turn=(s.turn==='P1')?P1:P2;
-  starter=s.starter?{...s.starter}:null; heelsAvailable=s.heelsAvailable; seq=[...s.seq]; running=s.running; go={...s.go};
+  starter=s.starter?{...s.starter}:null; heelsAvailable=s.heelsAvailable;
+  seq=[...s.seq]; running=s.running; go={...s.go};
   lastScore.textContent=s.last; gameOver=s.gameOver;
   refresh();
 }
@@ -169,22 +186,22 @@ function refresh(){
   drawPegs();
   starterBadge.textContent = starter ? `${label(starter.rank)}${starter.suit}` : '—';
   btnHeels.disabled = !(starter && starter.rank===11 && heelsAvailable) || gameOver;
-  btnGo.disabled = gameOver || seq.length===0; // we don't know hands; user decides “Go”
+  btnGo.disabled = gameOver || seq.length===0; // minimal trainer: user decides when "Go" applies
   btnUndo.disabled = undo.length===0 || gameOver;
   seqEl.innerHTML = seq.map(c=>`<span class="badge mono">${c.player.id}:${label(c.rank)}(${c.value})</span>`).join('');
 }
 
-/* ---------- Core rules ---------- */
+/* ---------- Rules ---------- */
 function leapfrog(player, points, why=''){
   if(points<=0) return;
-  snapshot(`peg ${player.id} +${points} ${why}`);
   const target = Math.min(121, player.back + points);
-  player.back = target; [player.front, player.back] = [player.back, player.front];
+  player.back = target;
+  [player.front, player.back] = [player.back, player.front]; // only back peg moves, then becomes front
   lastScore.textContent = `${player.id} +${points} ${why}`;
   if(player.front>=121){ gameOver=true; lastScore.textContent = `${player.id} pegs out`; }
-  refresh();
 }
 function scoreRunTail(arr){
+  // longest tail run k>=3; unique ranks and consecutive values (A low)
   let best=0;
   for(let k=arr.length;k>=3;k--){
     const t=arr.slice(-k).map(x=>x.rank);
@@ -198,57 +215,60 @@ function playCard(rank){
   if(gameOver) return;
   const value = val(rank);
   if(running + value > 31){ alert("That would exceed 31. If you can't play, press Go."); return; }
+
   snapshot(`play ${turn.id} ${label(rank)}`);
 
-  // first card => heels no longer available
+  // first play => heels window closes
   if(heelsAvailable) heelsAvailable=false;
 
+  // register play
   seq.push({player:turn, rank, value});
   running += value;
   go.lastPlayer = turn;
 
-  // pairs/trips/quads
+  // pairs / trips / quads
   let same=1;
   for(let i=seq.length-2;i>=0;i--){ if(seq[i].rank===rank) same++; else break; }
   if(same===2) leapfrog(turn,2,'Pair +2');
   else if(same===3) leapfrog(turn,6,'Pair Royal +6');
   else if(same===4) leapfrog(turn,12,'Double Pair Royal +12');
 
-  // run
-  const runPts = scoreRunTail(seq);
+  // runs
+  const runPts=scoreRunTail(seq);
   if(runPts>0) leapfrog(turn,runPts,`Run ${runPts} +${runPts}`);
 
   // 15 / 31
   if(running===15) leapfrog(turn,2,'Fifteen +2');
   if(running===31) leapfrog(turn,2,'Thirty-one +2');
 
+  // turn logic
   if(running===31){
     seq=[]; running=0; go={active:false,caller:null,lastPlayer:null};
     leader = (turn===P1)?P2:P1; turn = leader;
   }else{
     if(go.active){
-      // opponent of caller keeps turn (multi-plays)
+      // opponent of caller keeps playing (multi-plays)
       turn = (go.caller===P1)?P2:P1;
     }else{
-      // alternate normally
+      // normal alternation
       turn = (turn===P1)?P2:P1;
     }
   }
   refresh();
 }
 
-/* ---------- Buttons ---------- */
+/* ---------- Controls ---------- */
 btnCut.onclick = ()=>{
   if(gameOver) return;
   snapshot('cut');
-  // simple random starter
   const suits=['♣','♦','♥','♠']; const r=1+Math.floor(Math.random()*13); const s=suits[Math.floor(Math.random()*4)];
   starter = {rank:r, suit:s};
-  heelsAvailable = (r===11); // Jack
+  heelsAvailable = (r===11);
   refresh();
 };
 btnHeels.onclick = ()=>{
   if(!(starter && starter.rank===11 && heelsAvailable) || gameOver) return;
+  snapshot('heels');
   leapfrog(dealer,2,'His Heels +2'); heelsAvailable=false; refresh();
 };
 btnGo.onclick = ()=>{
@@ -257,30 +277,32 @@ btnGo.onclick = ()=>{
   if(go.active){
     if(running!==31 && go.lastPlayer) leapfrog(go.lastPlayer,1,'Last card +1');
     seq=[]; running=0; leader = go.caller; turn = leader; go={active:false,caller:null,lastPlayer:null};
-    refresh();
   }else{
     go={active:true, caller:turn, lastPlayer:go.lastPlayer};
-    turn = (turn===P1)?P2:P1; refresh();
+    turn = (turn===P1)?P2:P1;
   }
+  refresh();
 };
 btnReset.onclick = ()=>{
   if(gameOver) return;
-  snapshot('reset seq');
-  seq=[]; running=0; turn=leader; go={active:false,caller:null,lastPlayer:null};
-  refresh();
+  snapshot('reset');
+  seq=[]; running=0; go={active:false,caller:null,lastPlayer:null}; turn=leader; refresh();
 };
 btnUndo.onclick = ()=>{
   if(undo.length===0 || gameOver) return;
   const s=undo.pop(); restore(s);
 };
 btnSwap.onclick = ()=>{
-  snapshot('swap dealer');
+  snapshot('swap');
   [dealer,pone] = (dealer===P1)?[P2,P1]:[P1,P2];
   leader=pone; turn=leader; refresh();
 };
 btnNew.onclick = ()=>{
-  undo.length=0; Object.assign(P1,{front:0,back:0}); Object.assign(P2,{front:0,back:0});
-  starter=null; heelsAvailable=false; seq=[]; running=0; go={active:false,caller:null,lastPlayer:null}; dealer=P2; pone=P1; leader=pone; turn=leader; gameOver=false; lastScore.textContent='—';
+  undo.length=0;
+  Object.assign(P1,{front:0,back:0}); Object.assign(P2,{front:0,back:0});
+  starter=null; heelsAvailable=false;
+  seq=[]; running=0; go={active:false,caller:null,lastPlayer:null};
+  dealer=P2; pone=P1; leader=pone; turn=leader; gameOver=false; lastScore.textContent='—';
   refresh();
 };
 
@@ -288,7 +310,7 @@ btnNew.onclick = ()=>{
 (function buildCardRow(){
   const ranks=[1,2,3,4,5,6,7,8,9,10,11,12,13];
   ranks.forEach(r=>{
-    const b=document.createElement('button'); b.textContent=label(r); b.onclick=()=>playCard(r);
+    const b=document.createElement('button'); b.textContent=label(r); b.title=`Play ${label(r)}`; b.onclick=()=>playCard(r);
     cardRow.appendChild(b);
   });
 })();
