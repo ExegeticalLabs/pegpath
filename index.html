@@ -6,359 +6,182 @@
 <title>Cribbage Trainer — Minimal, ACC-faithful</title>
 <style>
   :root{
-    --bg:#0f1115; --panel:#121623; --border:#232633; --muted:#9aa3ba; --ink:#e6e8ee;
-    --accent:#4a82ff; --ok:#8cff9a; --warn:#ffb86b; --err:#ff6b6b;
-
+    --bg:#0f1115; --panel:#121623; --border:#232633; --ink:#e6e8ee; --muted:#9aa3ba;
+    --accent:#4a82ff; --ok:#8cff9a; --warn:#ffb86b;
     --hole:22px; --gap:6px; --peg:12px;
   }
   *{box-sizing:border-box}
-  body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.4 system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif}
-  header{
-    display:flex; align-items:center; justify-content:space-between; gap:12px;
-    padding:16px 20px; border-bottom:1px solid var(--border);
-  }
-  header h1{margin:0; font-size:16px; font-weight:600; letter-spacing:.2px}
-  .subtle{color:var(--muted); font-size:12px}
+  body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.45 system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial}
+  header{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center}
+  header h1{margin:0;font-size:16px;font-weight:600;letter-spacing:.2px}
+  .subtle{color:var(--muted);font-size:12px}
 
-  main{max-width:1024px; margin:18px auto 40px; padding:0 16px; display:grid; gap:14px}
+  main{max-width:980px;margin:18px auto 40px;padding:0 16px;display:grid;gap:14px}
 
-  /* Top status bar */
-  .status{
-    display:grid; grid-template-columns:1fr auto auto; gap:8px; align-items:center;
-  }
-  .chip{padding:6px 10px; border:1px solid var(--border); background:var(--panel); border-radius:10px; font-weight:600}
-  .mono{font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace}
-  .live{min-width:48px; text-align:center}
+  /* status */
+  .status{display:grid;grid-template-columns:1fr auto auto;gap:8px;align-items:center}
+  .chip{padding:6px 10px;border:1px solid var(--border);background:#141a2a;border-radius:10px;font-weight:600}
+  .mono{font-family:ui-monospace,Menlo,Consolas,monospace}
 
-  /* Board (always visible, first!) */
-  .board{
-    display:grid; gap:14px;
-    padding:14px; background:var(--panel); border:1px solid var(--border); border-radius:12px;
-  }
-  .track-title{display:flex; align-items:center; justify-content:space-between; color:var(--muted); font-size:12px}
-  .track{
-    display:grid; grid-template-columns:repeat(61, var(--hole)); gap:var(--gap); place-items:center;
-    justify-content:center; /* center the long row */
-    padding:6px 0;
-  }
+  /* board */
+  .board{padding:14px;border:1px solid var(--border);border-radius:12px;background:var(--panel);display:grid;gap:14px}
+  .track-title{display:flex;justify-content:space-between;color:var(--muted);font-size:12px}
+  .track{display:grid;grid-template-columns:repeat(61,var(--hole));gap:var(--gap);place-items:center;justify-content:center}
   .row2{margin-top:6px}
-  .hole{
-    width:var(--hole); height:var(--hole); border-radius:50%;
-    background:#2a2f41; outline:1px solid #121623; position:relative;
-  }
+  .hole{width:var(--hole);height:var(--hole);border-radius:50%;background:#2a2f41;outline:1px solid #0e1220;position:relative}
   .hole[data-idx="0"]{box-shadow:0 0 0 2px #2f3b58 inset}
-  .hole[data-idx="121"]{background:#2d3147; outline:2px solid var(--ok)}
+  .hole[data-idx="121"]{background:#2d3147;outline:2px solid var(--ok)}
+  .peg{position:absolute;width:var(--peg);height:var(--peg);border-radius:50%;top:50%;left:50%;transform:translate(-50%,-50%);box-shadow:0 0 0 2px rgba(0,0,0,.35);animation:peg-pop .18s ease-out}
+  .p1.front{background:#ff4d4d}.p1.back{background:#ff9898}
+  .p2.front{background:#4da3ff}.p2.back{background:#9cc8ff}
+  @keyframes peg-pop{from{transform:translate(-50%,-50%) scale(.65);opacity:.65}to{transform:translate(-50%,-50%) scale(1);opacity:1}}
 
-  .peg{
-    position:absolute; width:var(--peg); height:var(--peg); border-radius:50%;
-    top:50%; left:50%; transform:translate(-50%,-50%);
-    box-shadow:0 0 0 2px rgba(0,0,0,.35);
-    animation: peg-pop .18s ease-out;
-  }
-  .p1.front{background:#ff4d4d}
-  .p1.back{background:#ff9797}
-  .p2.front{background:#4da3ff}
-  .p2.back{background:#9ec8ff}
-  @keyframes peg-pop{from{transform:translate(-50%,-50%) scale(.65); opacity:.65} to{transform:translate(-50%,-50%) scale(1); opacity:1}}
-
-  /* Controls panel */
-  .panel{
-    display:grid; gap:12px; padding:12px; background:var(--panel); border:1px solid var(--border); border-radius:12px;
-  }
-  .row{display:flex; flex-wrap:wrap; gap:8px; align-items:center}
-  button{
-    background:#182035; color:var(--ink); border:1px solid var(--border); border-radius:10px;
-    padding:8px 12px; cursor:pointer; font-weight:600;
-  }
-  button:disabled{opacity:.5; cursor:not-allowed}
-  .primary{background:var(--accent); border-color:#3d6fe0}
-  .ghost{background:transparent}
-  .badge{padding:3px 8px; border:1px solid var(--border); background:#141a2a; border-radius:999px; font-size:12px}
-
-  /* Hands (simple, current hand big; other is tucked but available) */
-  .hands{display:grid; grid-template-columns:1fr 1fr; gap:10px}
-  .hand{padding:10px; border:1px solid var(--border); border-radius:12px; background:#0f1422}
-  .hand header{display:flex; justify-content:space-between; align-items:center; padding:0; border:0}
-  .cards{display:flex; gap:6px; flex-wrap:wrap; margin-top:8px}
-  .card{
-    min-width:44px; padding:8px 6px; border:1px solid var(--border); border-radius:10px;
-    background:#0e131f; display:flex; flex-direction:column; align-items:center; gap:4px;
-    transition:transform .08s ease, box-shadow .12s ease;
-    cursor:pointer; user-select:none;
-  }
-  .card .r{font-weight:700}
-  .card .s{font-size:12px}
-  .heart,.diamond{color:#ff6b6b} .club,.spade{color:#d9e1ff}
-  .card.playable{outline:2px solid var(--accent)}
-  .card.playable:hover{transform:translateY(-2px); box-shadow:0 6px 18px rgba(0,0,0,.22)}
-  .card.unplayable{opacity:.4; cursor:not-allowed}
-  .hand.turn{box-shadow:0 0 0 2px var(--accent) inset, 0 0 14px rgba(74,130,255,.2); border-color:var(--accent)}
-
-  /* Sequence strip */
-  .seq{display:flex; gap:6px; flex-wrap:wrap; min-height:28px; padding:6px 8px; border:1px solid var(--border); background:#0e131f; border-radius:10px; font-family:ui-monospace,Consolas,monospace}
-
-  /* Counting section kept tiny and optional */
-  input[type="number"]{width:72px; padding:8px 8px; border-radius:10px; border:1px solid var(--border); background:#0e131f; color:var(--ink)}
-  .muted{color:var(--muted)}
+  /* controls */
+  .panel{padding:12px;border:1px solid var(--border);border-radius:12px;background:var(--panel);display:grid;gap:10px}
+  .row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+  button{background:#182035;color:var(--ink);border:1px solid var(--border);border-radius:10px;padding:8px 12px;cursor:pointer;font-weight:600}
+  button.primary{background:var(--accent);border-color:#3a6fe0}
+  button:disabled{opacity:.5;cursor:not-allowed}
+  .badge{padding:3px 8px;border:1px solid var(--border);background:#141a2a;border-radius:999px;font-size:12px}
+  .seq{display:flex;gap:6px;flex-wrap:wrap;min-height:28px;padding:6px 8px;border:1px solid var(--border);background:#0e131f;border-radius:10px;font-family:ui-monospace,Consolas,monospace}
 </style>
 </head>
 <body>
 <header>
   <h1>Cribbage Trainer</h1>
-  <div class="subtle">ACC-faithful movement & pegging — minimal UI</div>
+  <div class="subtle">ACC-faithful pegging • minimal UI</div>
 </header>
 
 <main>
-
-  <!-- Top status -->
+  <!-- Status -->
   <div class="status">
-    <div class="chip">Dealer: <span id="dealerLabel">P2</span> • Pone: <span id="poneLabel">P1</span></div>
-    <div class="chip">Turn: <span id="turnLabel">P1</span></div>
-    <div class="chip">Running <span class="mono live" id="runningCount">0</span></div>
+    <div class="chip">Dealer: <span id="dealerLbl">P2</span> • Pone: <span id="poneLbl">P1</span></div>
+    <div class="chip">Turn: <span id="turnLbl">P1</span></div>
+    <div class="chip">Running <span class="mono" id="countLbl">0</span></div>
   </div>
 
-  <!-- Board (always visible, two stacked tracks) -->
+  <!-- Pegboard -->
   <section class="board" aria-label="Pegboard">
     <div>
-      <div class="track-title"><span>P1 Track</span><span class="subtle">Game hole: 121</span></div>
-      <div class="track" id="p1row1"></div>
-      <div class="track row2" id="p1row2"></div>
+      <div class="track-title"><span>P1 Track</span><span class="subtle">Game hole 121</span></div>
+      <div class="track" id="p1r1"></div>
+      <div class="track row2" id="p1r2"></div>
     </div>
     <div>
-      <div class="track-title"><span>P2 Track</span><span class="subtle">Game hole: 121</span></div>
-      <div class="track" id="p2row1"></div>
-      <div class="track row2" id="p2row2"></div>
+      <div class="track-title"><span>P2 Track</span><span class="subtle">Game hole 121</span></div>
+      <div class="track" id="p2r1"></div>
+      <div class="track row2" id="p2r2"></div>
     </div>
   </section>
 
-  <!-- Core controls (compact) -->
+  <!-- Controls -->
   <section class="panel" aria-label="Controls">
     <div class="row">
       <div class="badge">Starter: <span id="starterBadge">—</span></div>
-      <button id="btnHeels" class="ghost">His Heels +2</button>
-      <span class="subtle">•</span>
-      <button id="btnGo" class="ghost">Go</button>
-      <button id="btnUndo" class="ghost">Undo</button>
-      <span id="lastScore" class="badge">—</span>
-      <span id="gameMsg" class="badge subtle" role="status" aria-live="polite"> </span>
-      <div style="margin-left:auto"></div>
-      <button id="btnDeal" class="primary">Deal Hand</button>
-      <button id="btnSwapDealer" class="ghost">Swap Dealer</button>
-      <button id="btnNewGame" class="ghost">New Game</button>
+      <button id="btnCut" class="primary">Cut Starter</button>
+      <button id="btnHeels">His Heels +2</button>
+      <span class="badge" id="lastScore">—</span>
+      <span style="margin-left:auto"></span>
+      <button id="btnGo">Go</button>
+      <button id="btnReset">Reset Sequence</button>
+      <button id="btnUndo">Undo</button>
+      <button id="btnSwap">Swap Dealer</button>
+      <button id="btnNew">New Game</button>
     </div>
 
     <div class="row">
-      <div class="badge">Sequence</div>
-      <div id="seq" class="seq"></div>
+      <div class="badge">Current sequence</div>
+      <div id="seq" class="seq" aria-live="polite"></div>
     </div>
-  </section>
 
-  <!-- Hands (simple; only current hand needs attention) -->
-  <section class="panel" aria-label="Hands">
-    <div class="row" style="justify-content:space-between">
-      <div class="subtle">Click a playable card (outlined). After a Go, the opponent may play multiple times.</div>
-      <label class="subtle"><input type="checkbox" id="toggleBoth"> Show both hands</label>
-    </div>
-    <div class="hands">
-      <div class="hand" id="boxP1">
-        <header><strong>P1 Hand</strong><span class="subtle" id="hintP1"></span></header>
-        <div class="cards" id="handP1"></div>
-      </div>
-      <div class="hand" id="boxP2">
-        <header><strong>P2 Hand</strong><span class="subtle" id="hintP2"></span></header>
-        <div class="cards" id="handP2"></div>
-      </div>
-    </div>
-  </section>
-
-  <!-- Tiny counting section (optional; stays out of the way) -->
-  <section class="panel" aria-label="Counting">
-    <div class="row"><strong>Counting (optional)</strong><span class="subtle">Order: Pone → Dealer → Crib. Zero = no movement.</span></div>
     <div class="row">
-      <button id="btnStartCount">Start</button>
-      <span id="countStage" class="badge">Not started</span>
-      <span class="subtle">Pone</span><input type="number" id="ponePts" value="0" min="0"/><button id="btnCountPone" disabled>Peg</button>
-      <span class="subtle">Dealer</span><input type="number" id="dealerPts" value="0" min="0"/><button id="btnCountDealer" disabled>Peg</button>
-      <span class="subtle">Crib</span><input type="number" id="cribPts" value="0" min="0"/><button id="btnCountCrib" disabled>Peg</button>
+      <div class="badge">Play a card:</div>
+      <div id="cardRow" class="row"></div>
     </div>
   </section>
-
 </main>
 
 <script>
-/* ========= Minimal, solid core ========= */
-const SUITS = ['♣','♦','♥','♠'];
-const isRed = s => (s==='♦'||s==='♥');
+/* ---------- Core model (no hands, just pegging) ---------- */
 const label = r => ({11:'J',12:'Q',13:'K'}[r] || (r===1?'A':r));
 const val = r => Math.min(r,10);
+const P1 = { id:'P1', front:0, back:0 };
+const P2 = { id:'P2', front:0, back:0 };
+let dealer=P2, pone=P1, leader=pone, turn=leader;
 
-const P1 = { id:'P1', front:0, back:0, hand:[] };
-const P2 = { id:'P2', front:0, back:0, hand:[] };
-let dealer = P2, pone = P1, leader = pone, turn = leader;
-
-let deck=[], starter=null, heelsAvailable=false;
-let seq=[], running=0, goState={active:false, caller:null, lastPlayer:null};
+let starter=null, heelsAvailable=false;
+let seq=[], running=0;
+let go={active:false, caller:null, lastPlayer:null};
 let gameOver=false;
 const undo=[];
 
-/* --- DOM refs --- */
-const p1row1 = document.getElementById('p1row1'), p1row2=document.getElementById('p1row2');
-const p2row1 = document.getElementById('p2row1'), p2row2=document.getElementById('p2row2');
-const dealerLabel = document.getElementById('dealerLabel');
-const poneLabel = document.getElementById('poneLabel');
-const turnLabel = document.getElementById('turnLabel');
-const runningCount = document.getElementById('runningCount');
-const starterBadge = document.getElementById('starterBadge');
-const btnHeels = document.getElementById('btnHeels');
-const btnGo = document.getElementById('btnGo');
-const btnUndo = document.getElementById('btnUndo');
-const btnDeal = document.getElementById('btnDeal');
-const btnSwapDealer = document.getElementById('btnSwapDealer');
-const btnNewGame = document.getElementById('btnNewGame');
-const lastScore = document.getElementById('lastScore');
-const gameMsg = document.getElementById('gameMsg');
-const seqEl = document.getElementById('seq');
+/* ---------- DOM ---------- */
+const p1r1=document.getElementById('p1r1'), p1r2=document.getElementById('p1r2');
+const p2r1=document.getElementById('p2r1'), p2r2=document.getElementById('p2r2');
+const dealerLbl=document.getElementById('dealerLbl'), poneLbl=document.getElementById('poneLbl');
+const turnLbl=document.getElementById('turnLbl'), countLbl=document.getElementById('countLbl');
+const starterBadge=document.getElementById('starterBadge'), lastScore=document.getElementById('lastScore');
+const seqEl=document.getElementById('seq'), cardRow=document.getElementById('cardRow');
+const btnCut=document.getElementById('btnCut'), btnHeels=document.getElementById('btnHeels');
+const btnGo=document.getElementById('btnGo'), btnReset=document.getElementById('btnReset');
+const btnUndo=document.getElementById('btnUndo'), btnSwap=document.getElementById('btnSwap');
+const btnNew=document.getElementById('btnNew');
 
-const boxP1=document.getElementById('boxP1'), boxP2=document.getElementById('boxP2');
-const handP1 = document.getElementById('handP1'), handP2=document.getElementById('handP2');
-const hintP1 = document.getElementById('hintP1'), hintP2=document.getElementById('hintP2');
-const toggleBoth = document.getElementById('toggleBoth');
-
-const btnStartCount=document.getElementById('btnStartCount');
-const countStage=document.getElementById('countStage');
-const ponePts=document.getElementById('ponePts');
-const dealerPts=document.getElementById('dealerPts');
-const cribPts=document.getElementById('cribPts');
-const btnCountPone=document.getElementById('btnCountPone');
-const btnCountDealer=document.getElementById('btnCountDealer');
-const btnCountCrib=document.getElementById('btnCountCrib');
-
-/* --- Build board rows --- */
+/* ---------- Build board ---------- */
 function buildRow(container, from, to){
   container.innerHTML='';
   for(let i=from;i<=to;i++){
-    const h=document.createElement('div'); h.className='hole'; h.dataset.idx=i;
-    container.appendChild(h);
+    const h=document.createElement('div'); h.className='hole'; h.dataset.idx=i; container.appendChild(h);
   }
 }
-buildRow(p1row1,0,60); buildRow(p1row2,61,121);
-buildRow(p2row1,0,60); buildRow(p2row2,61,121);
-
 function hole(player, idx){
-  const rows = (player===P1) ? [p1row1,p1row2] : [p2row1,p2row2];
-  const row = (idx<=60) ? rows[0] : rows[1];
+  const rows = (player===P1)?[p1r1,p1r2]:[p2r1,p2r2];
+  const row = (idx<=60)?rows[0]:rows[1];
   return row.querySelector(`.hole[data-idx="${idx}"]`);
 }
 function drawPegs(){
-  [p1row1,p1row2,p2row1,p2row2].forEach(c=>c.querySelectorAll('.peg').forEach(p=>p.remove()));
+  [p1r1,p1r2,p2r1,p2r2].forEach(c=>c.querySelectorAll('.peg').forEach(p=>p.remove()));
   [['front','p1 front'],['back','p1 back']].forEach(([w,cls])=>{
-    const el = hole(P1, P1[w]); const peg=document.createElement('div'); peg.className=`peg ${cls}`; el.appendChild(peg);
+    const el = hole(P1,P1[w]); const peg=document.createElement('div'); peg.className=`peg ${cls}`; el.appendChild(peg);
   });
   [['front','p2 front'],['back','p2 back']].forEach(([w,cls])=>{
-    const el = hole(P2, P2[w]); const peg=document.createElement('div'); peg.className=`peg ${cls}`; el.appendChild(peg);
+    const el = hole(P2,P2[w]); const peg=document.createElement('div'); peg.className=`peg ${cls}`; el.appendChild(peg);
   });
 }
 
-/* --- Deck / hands --- */
-function mkDeck(){
-  const d=[];
-  for(const s of SUITS) for(let r=1;r<=13;r++) d.push({rank:r, suit:s, value:val(r)});
-  for(let i=d.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [d[i],d[j]]=[d[j],d[i]]; }
-  return d;
-}
-function dealHand(){
-  snapshot('deal');
-  deck = mkDeck();
-  P1.hand=[]; P2.hand=[];
-  for(let i=0;i<6;i++){ P1.hand.push(deck.pop()); P2.hand.push(deck.pop()); }
-  starter = deck.pop();
-  heelsAvailable = (starter.rank===11);
-  seq=[]; running=0; goState={active:false, caller:null, lastPlayer:null};
-  lastScore.textContent='—'; gameMsg.textContent=' ';
-  refresh();
-}
-
-/* --- UI helpers --- */
+/* ---------- UI helpers ---------- */
 function snapshot(label=''){
   undo.push({
-    label,
-    P1:{front:P1.front, back:P1.back, hand:structuredClone(P1.hand)},
-    P2:{front:P2.front, back:P2.back, hand:structuredClone(P2.hand)},
-    deck:structuredClone(deck),
-    starter: starter ? {...starter} : null,
-    heelsAvailable,
-    turn:turn.id, leader:leader.id, dealer:dealer.id, pone:pone.id,
-    seq:structuredClone(seq), running, go:structuredClone(goState),
-    lastText:lastScore.textContent, gameOver, gameMsg:gameMsg.textContent
+    label, P1:{...P1}, P2:{...P2}, leader:leader.id, dealer:dealer.id, pone:pone.id, turn:turn.id,
+    starter: starter ? {...starter} : null, heelsAvailable, seq:[...seq], running, go:{...go}, last:lastScore.textContent, gameOver
   });
   btnUndo.disabled=false;
 }
-function restore(state){
-  P1.front=state.P1.front; P1.back=state.P1.back; P1.hand=structuredClone(state.P1.hand);
-  P2.front=state.P2.front; P2.back=state.P2.back; P2.hand=structuredClone(state.P2.hand);
-  deck=structuredClone(state.deck);
-  starter= state.starter ? {...state.starter} : null;
-  heelsAvailable=state.heelsAvailable;
-  turn = (state.turn==='P1')?P1:P2;
-  leader = (state.leader==='P1')?P1:P2;
-  dealer = (state.dealer==='P1')?P1:P2;
-  pone   = (state.pone  ==='P1')?P1:P2;
-  seq=structuredClone(state.seq); running=state.running; goState=structuredClone(state.go);
-  lastScore.textContent=state.lastText; gameOver=state.gameOver; gameMsg.textContent=state.gameMsg;
+function restore(s){
+  Object.assign(P1,s.P1); Object.assign(P2,s.P2);
+  leader=(s.leader==='P1')?P1:P2; dealer=(s.dealer==='P1')?P1:P2; pone=(s.pone==='P1')?P1:P2; turn=(s.turn==='P1')?P1:P2;
+  starter=s.starter?{...s.starter}:null; heelsAvailable=s.heelsAvailable; seq=[...s.seq]; running=s.running; go={...s.go};
+  lastScore.textContent=s.last; gameOver=s.gameOver;
   refresh();
 }
 function refresh(){
-  dealerLabel.textContent=dealer.id; poneLabel.textContent=pone.id; turnLabel.textContent=turn.id;
-  runningCount.textContent=running;
+  dealerLbl.textContent=dealer.id; poneLbl.textContent=pone.id; turnLbl.textContent=turn.id; countLbl.textContent=running;
   drawPegs();
   starterBadge.textContent = starter ? `${label(starter.rank)}${starter.suit}` : '—';
   btnHeels.disabled = !(starter && starter.rank===11 && heelsAvailable) || gameOver;
-  renderHands();
-  renderSeq();
-  // Go button: only when cannot play & sequence not empty
-  btnGo.disabled = gameOver || seq.length===0 || playable(turn).length>0;
-  boxP1.classList.toggle('turn', turn===P1);
-  boxP2.classList.toggle('turn', turn===P2);
+  btnGo.disabled = gameOver || seq.length===0; // we don't know hands; user decides “Go”
   btnUndo.disabled = undo.length===0 || gameOver;
-}
-function renderHands(){
-  const showBoth = toggleBoth.checked;
-  handP1.innerHTML=''; handP2.innerHTML='';
-  [ [P1,handP1,boxP1,hintP1], [P2,handP2,boxP2,hintP2] ].forEach(([pl,el,box,hint])=>{
-    const itsTurn = pl===turn && !gameOver;
-    const plays = playable(pl);
-    hint.textContent = itsTurn
-      ? (plays.length? 'playable highlighted' : 'no playable cards → Go')
-      : '';
-    pl.hand.forEach((c,i)=>{
-      const card=document.createElement('div'); card.className='card';
-      const rr=document.createElement('div'); rr.className='r'; rr.textContent=label(c.rank);
-      const ss=document.createElement('div'); ss.className='s '+(isRed(c.suit)?'heart':'club'); ss.textContent=c.suit;
-      card.append(rr,ss);
-      const can = itsTurn && running + c.value <= 31;
-      card.classList.add(can?'playable':'unplayable');
-      if(!itsTurn) card.classList.add('unplayable');
-      card.onclick = ()=> { if(can) playCard(pl,i); };
-      el.appendChild(card);
-    });
-    // simplicity: hide non-turn hand unless "show both" is on
-    box.style.opacity = (showBoth || itsTurn) ? 1 : .35;
-  });
-}
-function renderSeq(){
   seqEl.innerHTML = seq.map(c=>`<span class="badge mono">${c.player.id}:${label(c.rank)}(${c.value})</span>`).join('');
 }
 
-/* --- rules bits --- */
-function playable(player){ return player.hand.filter(c => running + c.value <= 31); }
+/* ---------- Core rules ---------- */
 function leapfrog(player, points, why=''){
   if(points<=0) return;
-  const target = Math.min(121, player.back + points);
   snapshot(`peg ${player.id} +${points} ${why}`);
-  player.back = target;
-  [player.front, player.back] = [player.back, player.front];
+  const target = Math.min(121, player.back + points);
+  player.back = target; [player.front, player.back] = [player.back, player.front];
   lastScore.textContent = `${player.id} +${points} ${why}`;
-  if(player.front>=121){ gameOver=true; gameMsg.textContent=`${player.id} pegs out`; }
+  if(player.front>=121){ gameOver=true; lastScore.textContent = `${player.id} pegs out`; }
   refresh();
 }
 function scoreRunTail(arr){
@@ -371,108 +194,110 @@ function scoreRunTail(arr){
   }
   return best;
 }
-function playCard(player, idx){
+function playCard(rank){
   if(gameOver) return;
-  snapshot(`play ${player.id}`);
-  if(heelsAvailable) { heelsAvailable=false; } // forfeit if not taken
-  const [card] = player.hand.splice(idx,1);
-  seq.push({player, rank:card.rank, value:card.value});
-  running += card.value;
-  goState.lastPlayer = player;
+  const value = val(rank);
+  if(running + value > 31){ alert("That would exceed 31. If you can't play, press Go."); return; }
+  snapshot(`play ${turn.id} ${label(rank)}`);
 
-  // pegging: pairs/trips/quads
+  // first card => heels no longer available
+  if(heelsAvailable) heelsAvailable=false;
+
+  seq.push({player:turn, rank, value});
+  running += value;
+  go.lastPlayer = turn;
+
+  // pairs/trips/quads
   let same=1;
-  for(let i=seq.length-2;i>=0;i--){ if(seq[i].rank===card.rank) same++; else break; }
-  if(same===2) leapfrog(player,2,'Pair +2');
-  else if(same===3) leapfrog(player,6,'Pair Royal +6');
-  else if(same===4) leapfrog(player,12,'Double Pair Royal +12');
+  for(let i=seq.length-2;i>=0;i--){ if(seq[i].rank===rank) same++; else break; }
+  if(same===2) leapfrog(turn,2,'Pair +2');
+  else if(same===3) leapfrog(turn,6,'Pair Royal +6');
+  else if(same===4) leapfrog(turn,12,'Double Pair Royal +12');
 
-  // runs
+  // run
   const runPts = scoreRunTail(seq);
-  if(runPts>0) leapfrog(player,runPts,`Run ${runPts} +${runPts}`);
+  if(runPts>0) leapfrog(turn,runPts,`Run ${runPts} +${runPts}`);
 
   // 15 / 31
-  if(running===15) leapfrog(player,2,'Fifteen +2');
-  if(running===31) leapfrog(player,2,'Thirty-one +2');
+  if(running===15) leapfrog(turn,2,'Fifteen +2');
+  if(running===31) leapfrog(turn,2,'Thirty-one +2');
 
   if(running===31){
-    seq=[]; running=0; goState={active:false, caller:null, lastPlayer:null};
-    leader = (player===P1)?P2:P1; turn = leader;
-  } else {
-    if(goState.active){
-      // opponent of caller keeps the turn (multi-plays allowed)
-      turn = (goState.caller===P1)?P2:P1;
-    } else {
-      // normal alternate
-      turn = (player===P1)?P2:P1;
+    seq=[]; running=0; go={active:false,caller:null,lastPlayer:null};
+    leader = (turn===P1)?P2:P1; turn = leader;
+  }else{
+    if(go.active){
+      // opponent of caller keeps turn (multi-plays)
+      turn = (go.caller===P1)?P2:P1;
+    }else{
+      // alternate normally
+      turn = (turn===P1)?P2:P1;
     }
   }
   refresh();
 }
 
-/* --- Go / Heels / Undo --- */
-btnGo.onclick = ()=>{
+/* ---------- Buttons ---------- */
+btnCut.onclick = ()=>{
   if(gameOver) return;
-  if(seq.length===0) return alert('Lead first');
-  if(playable(turn).length>0) return alert('You have a playable card (Go would be a renege).');
-
-  snapshot('Go');
-  if(goState.active){
-    if(running!==31 && goState.lastPlayer) leapfrog(goState.lastPlayer,1,'Last card +1');
-    seq=[]; running=0; turn = leader = goState.caller; goState={active:false,caller:null,lastPlayer:null};
-  }else{
-    goState={active:true, caller:turn, lastPlayer:goState.lastPlayer};
-    turn = (turn===P1)?P2:P1;
-  }
+  snapshot('cut');
+  // simple random starter
+  const suits=['♣','♦','♥','♠']; const r=1+Math.floor(Math.random()*13); const s=suits[Math.floor(Math.random()*4)];
+  starter = {rank:r, suit:s};
+  heelsAvailable = (r===11); // Jack
   refresh();
 };
 btnHeels.onclick = ()=>{
   if(!(starter && starter.rank===11 && heelsAvailable) || gameOver) return;
   leapfrog(dealer,2,'His Heels +2'); heelsAvailable=false; refresh();
 };
+btnGo.onclick = ()=>{
+  if(gameOver || seq.length===0) return;
+  snapshot('go');
+  if(go.active){
+    if(running!==31 && go.lastPlayer) leapfrog(go.lastPlayer,1,'Last card +1');
+    seq=[]; running=0; leader = go.caller; turn = leader; go={active:false,caller:null,lastPlayer:null};
+    refresh();
+  }else{
+    go={active:true, caller:turn, lastPlayer:go.lastPlayer};
+    turn = (turn===P1)?P2:P1; refresh();
+  }
+};
+btnReset.onclick = ()=>{
+  if(gameOver) return;
+  snapshot('reset seq');
+  seq=[]; running=0; turn=leader; go={active:false,caller:null,lastPlayer:null};
+  refresh();
+};
 btnUndo.onclick = ()=>{
   if(undo.length===0 || gameOver) return;
   const s=undo.pop(); restore(s);
 };
-
-/* --- Counting (tiny) --- */
-let counting=false, step=0;
-btnStartCount.onclick = ()=>{
-  if(gameOver) return alert('Game over. New game to continue.');
-  counting=true; step=1; countStage.textContent='Pone';
-  btnCountPone.disabled=false; btnCountDealer.disabled=true; btnCountCrib.disabled=true;
-};
-btnCountPone.onclick = ()=>{
-  if(!(counting && step===1)) return;
-  const pts=+ponePts.value||0; if(pts>0) leapfrog(pone,pts,'Pone hand');
-  step=2; countStage.textContent='Dealer'; btnCountPone.disabled=true; btnCountDealer.disabled=false;
-};
-btnCountDealer.onclick = ()=>{
-  if(!(counting && step===2)) return;
-  const pts=+dealerPts.value||0; if(pts>0) leapfrog(dealer,pts,'Dealer hand');
-  step=3; countStage.textContent='Crib'; btnCountDealer.disabled=true; btnCountCrib.disabled=false;
-};
-btnCountCrib.onclick = ()=>{
-  if(!(counting && step===3)) return;
-  const pts=+cribPts.value||0; if(pts>0) leapfrog(dealer,pts,'Crib');
-  counting=false; step=0; countStage.textContent='Done'; btnCountCrib.disabled=true;
-};
-
-/* --- Game controls --- */
-btnDeal.onclick = ()=> dealHand();
-btnSwapDealer.onclick = ()=>{
+btnSwap.onclick = ()=>{
   snapshot('swap dealer');
   [dealer,pone] = (dealer===P1)?[P2,P1]:[P1,P2];
   leader=pone; turn=leader; refresh();
 };
-btnNewGame.onclick = ()=>{
-  undo.length=0; P1.front=P1.back=0; P2.front=P2.back=0; seq=[]; running=0; goState={active:false,caller:null,lastPlayer:null};
-  dealer=P2; pone=P1; leader=pone; turn=leader; starter=null; heelsAvailable=false; gameOver=false; lastScore.textContent='—'; gameMsg.textContent=' ';
-  drawPegs(); refresh();
+btnNew.onclick = ()=>{
+  undo.length=0; Object.assign(P1,{front:0,back:0}); Object.assign(P2,{front:0,back:0});
+  starter=null; heelsAvailable=false; seq=[]; running=0; go={active:false,caller:null,lastPlayer:null}; dealer=P2; pone=P1; leader=pone; turn=leader; gameOver=false; lastScore.textContent='—';
+  refresh();
 };
 
-/* --- Boot --- */
+/* ---------- Card row (A..K) ---------- */
+(function buildCardRow(){
+  const ranks=[1,2,3,4,5,6,7,8,9,10,11,12,13];
+  ranks.forEach(r=>{
+    const b=document.createElement('button'); b.textContent=label(r); b.onclick=()=>playCard(r);
+    cardRow.appendChild(b);
+  });
+})();
+
+/* ---------- Boot ---------- */
+buildRow(p1r1,0,60); buildRow(p1r2,61,121);
+buildRow(p2r1,0,60); buildRow(p2r2,61,121);
 drawPegs(); refresh();
 </script>
 </body>
 </html>
+
